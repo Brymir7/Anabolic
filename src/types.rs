@@ -1,6 +1,8 @@
 use macroquad::math::Vec3;
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug  )]
+
 pub struct ChunkVec3(pub Vec3);
+#[derive(Debug  )]
 pub struct ChunkPos {
     pub x: u8,
     pub z: u8,
@@ -46,3 +48,4 @@ pub struct InteractableBlocks {
     pub positions: Vec<Vec3>,
     pub b_type: InteractableBlockType,
 }
+

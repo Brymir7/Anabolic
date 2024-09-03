@@ -9,6 +9,7 @@ pub const CHUNK_SIZE: u8 = 16;
 pub const MAX_BLOCK_TYPES: u8 = u8::MAX;
 pub const GRAVITY: f32 = -9.81;
 pub const JUMP_STRENGTH: f32 = 10.0;
+pub const TILE_SIZE: f32 = 1.0;
 pub fn window_conf() -> Conf {
     Conf {
         window_title: "Anabolic".to_owned(),
