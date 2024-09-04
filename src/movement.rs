@@ -1,9 +1,4 @@
-use macroquad::{ color::RED, math::Vec3, models::draw_cube_wires };
-
-use crate::{
-    config::{ CHUNK_SIZE, GRAVITY, MOVE_SPEED, PHYSICS_FRAME_TIME },
-    types::{ ChunkVec3, EntityType },
-};
+use shared::{config::{CHUNK_SIZE, GRAVITY, MOVE_SPEED, PHYSICS_FRAME_TIME}, types::{ChunkVec3, EntityType}, Vec3};
 
 pub struct MovementSystem;
 
@@ -40,8 +35,6 @@ impl MovementSystem {
                 pos.0 + Vec3::new(new_pos.0.x - pos.0.x, new_pos.0.y - pos.0.y, 0.0)
             );
         }
-        println!("New POS {:?}", new_pos);
-        println!("NEW POS {:?}", new_pos.to_chunk());
         *pos = new_pos;
     }
 

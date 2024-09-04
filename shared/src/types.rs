@@ -49,3 +49,8 @@ pub struct InteractableBlocks {
     pub b_type: InteractableBlockType,
 }
 
+
+enum EnemyType {
+    Flying,
+    Default, 
+}

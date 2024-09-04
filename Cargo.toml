@@ -1,7 +1,13 @@
 [package]
-name = "Anabolic"
+name = "anabolic"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 macroquad = "0.4.6"
+hot-lib-reloader = "0.7"
+render = { path = "renderer" }
+shared = { path = "shared" } 
+[workspace]
+resolver = "2"
+members = ["renderer", "shared"]

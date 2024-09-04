@@ -1,18 +1,16 @@
-use std::cmp::{ max, min };
-
-use config::{
-    window_conf, CHUNK_SIZE, INITIAL_PLAYER_POS, JUMP_STRENGTH, LOOK_SPEED, PHYSICS_FRAME_TIME, WORLD_UP
-};
 use macroquad::prelude::*;
 use movement::MovementSystem;
-use render::RenderSystem;
-use types::{ ChunkVec3, EntityType, Player };
+use shared::{config::{window_conf, CHUNK_SIZE, INITIAL_PLAYER_POS, JUMP_STRENGTH, LOOK_SPEED, PHYSICS_FRAME_TIME, WORLD_UP}, types::{ChunkVec3, EntityType, Player}};
 use util::vec3_no_y;
 pub mod movement;
-pub mod config;
-pub mod render;
-pub mod types;
 pub mod util;
+use render::{Drawer, Screen};
+#[hot_lib_reloader::hot_module(dylib = "render")]
+mod hot_r_renderer {
+    hot_functions_from_file!("renderer/src/lib.rs");
+    use render::Screen;
+    use shared::{config::{window_conf, CHUNK_SIZE, INITIAL_PLAYER_POS, JUMP_STRENGTH, LOOK_SPEED, PHYSICS_FRAME_TIME, WORLD_UP}, types::{ChunkVec3, EntityType, Player}, Vec3};
+}
 struct World {
     player: Player,
     camera: Camera3D,
@@ -42,7 +40,6 @@ impl World {
                 CHUNK_SIZE as usize
             ],
         };
-        println!("{:?}", world.world_layout.len());
         for x in 0..CHUNK_SIZE as usize {
             for z in 0..CHUNK_SIZE as usize {
                 world.world_layout[x][z][0] = EntityType::SolidBlock;
@@ -102,9 +99,18 @@ impl World {
 
     fn draw(&self) {
         set_camera(&self.camera);
-        draw_cube_wires(self.player.pos.0, Vec3::new(1.0, 2.0, 1.0), RED);
-        RenderSystem::render_world(&self.world_layout);
+        // draw_cube_wires(self.player.pos.0, Vec3::new(1.0, 2.0, 1.0), RED);
+        // hot_r_renderer::render_world(&self.world_layout);
+        // hot_r_renderer::render_default_enemy(vec3(5.0, 1.0, 5.0), Vec3::splat(1.0));
         set_default_camera()
+    }
+}
+
+
+pub struct DrawerImpl;
+impl Drawer for DrawerImpl {
+    fn draw_text(&self, text: &str, x: f32, y: f32, font_size: f32) {
+        macroquad::prelude::draw_text(text, x, y, font_size, WHITE);
     }
 }
 
@@ -112,6 +118,10 @@ impl World {
 async fn main() {
     let mut elapsed_time = 0.0;
     let mut world = World::default();
+
+    let drawer: Box<dyn Drawer> = Box::new(DrawerImpl {});
+    let screen = Screen { drawer };
+
     set_cursor_grab(true);
     show_mouse(false);
     loop {
@@ -120,6 +130,7 @@ async fn main() {
         world.handle_input();
         while elapsed_time >= PHYSICS_FRAME_TIME {
             world.update();
+            hot_r_renderer::render_text(&screen);
             elapsed_time = 0.0;
         }
         world.draw();
