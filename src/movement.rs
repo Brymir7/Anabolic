@@ -40,22 +40,26 @@ impl MovementSystem {
                 pos.0 + Vec3::new(new_pos.0.x - pos.0.x, new_pos.0.y - pos.0.y, 0.0)
             );
         }
+        println!("New POS {:?}", new_pos);
         println!("NEW POS {:?}", new_pos.to_chunk());
         *pos = new_pos;
     }
 
-    fn check_collision(pos: &ChunkVec3, chunk: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]) -> bool {
-        let chunk_pos = pos.to_chunk();
+    fn check_collision(
+        pos: &ChunkVec3,
+        chunk: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]
+    ) -> bool {
+        if pos.0.x < 0.0 || pos.0.z < 0.0 || pos.0.y < 0.0
+        {
+            return true;
+        }
+        let chunk_pos = pos.to_chunk(); // only cast if we know its a safe usize
         if
-            chunk_pos.x < 0 ||
             chunk_pos.x >= CHUNK_SIZE ||
-            chunk_pos.z < 0 ||
             chunk_pos.z >= CHUNK_SIZE ||
-            chunk_pos.y < 0 ||
             chunk_pos.y >= CHUNK_SIZE
         {
-
-            return true; // Collision with chunk boundary
+            return true;
         }
         // Check if the entity at this position is solid
         match chunk[chunk_pos.x as usize][chunk_pos.z as usize][chunk_pos.y as usize] {

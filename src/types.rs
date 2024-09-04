@@ -21,8 +21,8 @@ impl ChunkVec3 {
     pub fn to_chunk(&self) -> ChunkPos {
         let data = self.0;
         assert!(data.x.trunc() < 255.0 && data.x >= 0.0);
-        assert!(data.y.trunc() < 255.0 && data.x >= 0.0);
-        assert!(data.z.trunc() < 255.0 && data.x >= 0.0);
+        assert!(data.y.trunc() < 255.0 && data.y >= 0.0);
+        assert!(data.z.trunc() < 255.0 && data.z >= 0.0);
         return ChunkPos::new(data.x.trunc() as u8, data.z.trunc() as u8, data.y.trunc() as u8);
     }
 }

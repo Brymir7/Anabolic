@@ -93,7 +93,7 @@ impl World {
                     player_vel.y = JUMP_STRENGTH;
                 }
                 self.player.vel = player_vel;
-                // self.camera.position = self.player.pos.0;
+                self.camera.position = self.player.pos.0;
                 self.camera.up = up;
                 self.camera.target = self.player.pos.0 + front;
             }
