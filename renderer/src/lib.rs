@@ -1,12 +1,5 @@
 use shared::{
-    config::{ CHUNK_SIZE, TILE_SIZE },
-    draw_cube_wires,
-    types::EntityType,
-    vec3,
-    Color,
-    Vec3,
-    GREEN,
-    RED,
+    config::{ CHUNK_SIZE, TILE_SIZE }, draw_cube_wires, types::EntityType, vec3, Color, Vec3, BLUE, GREEN, RED
 };
 pub trait Drawer {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color);
@@ -40,5 +33,9 @@ pub fn render_world(
 #[no_mangle]
 pub fn render_default_enemy(screen:&Screen, pos: Vec3, scale: Vec3) {
     // HEAD
-    screen.drawer.draw_cube_wires(pos, Vec3::splat(2.0), RED);
+    screen.drawer.draw_cube_wires(pos + vec3(0.0, 0.75, 0.0), Vec3::splat(0.5), RED);
+    screen.drawer.draw_cube_wires(pos, Vec3::splat(1.0), RED);
+    screen.drawer.draw_cube_wires(pos + vec3(0.5, -0.5, 0.0), Vec3::new(0.5, 0.5, 0.5), BLUE);
+    screen.drawer.draw_cube_wires(pos + vec3(0.0, -0.5, 0.0), Vec3::new(0.5, 0.5, 0.5), BLUE);
 }
+

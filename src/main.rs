@@ -62,8 +62,8 @@ impl World {
         if self.grabbed {
             let mouse_delta = mouse_delta_position();
             if self.grabbed {
-                self.player.yaw += mouse_delta.x * delta * LOOK_SPEED;
-                self.player.pitch += mouse_delta.y * delta * -LOOK_SPEED;
+                self.player.yaw -= mouse_delta.x * delta * LOOK_SPEED;
+                self.player.pitch -= mouse_delta.y * delta * -LOOK_SPEED;
                 self.player.pitch = self.player.pitch.clamp(-1.5, 1.5);
                 let front = vec3(
                     self.player.yaw.cos() * self.player.pitch.cos(),
@@ -147,7 +147,7 @@ async fn main() {
         world.draw(&screen);
         #[cfg(not(feature = "hot-reload"))]
         world.draw();
-        
+
         draw_text(&format!("FPS: {}", get_fps()), 10.0, 10.0, 20.0, WHITE);
         next_frame().await;
     }
