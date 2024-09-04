@@ -11,3 +11,7 @@ shared = { path = "shared" }
 [workspace]
 resolver = "2"
 members = ["renderer", "shared"]
+
+[features]
+default=["hot-reload"]
+hot-reload = []

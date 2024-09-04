@@ -97,6 +97,7 @@ impl World {
         }
     }
 
+    #[cfg(not(feature = "hot-reload"))]
     fn draw(&self) {
         set_camera(&self.camera);
         // draw_cube_wires(self.player.pos.0, Vec3::new(1.0, 2.0, 1.0), RED);
@@ -104,13 +105,21 @@ impl World {
         // hot_r_renderer::render_default_enemy(vec3(5.0, 1.0, 5.0), Vec3::splat(1.0));
         set_default_camera()
     }
+
+    #[cfg(feature = "hot-reload")]
+    fn draw(&self, screen: &Screen) {
+        set_camera(&self.camera);
+        hot_r_renderer::render_world(screen, &self.world_layout);
+        hot_r_renderer::render_default_enemy(screen, vec3(5.0, 1.0, 5.0), Vec3::splat(1.0));
+        set_default_camera()
+    }
 }
 
 
 pub struct DrawerImpl;
 impl Drawer for DrawerImpl {
-    fn draw_text(&self, text: &str, x: f32, y: f32, font_size: f32) {
-        macroquad::prelude::draw_text(text, x, y, font_size, WHITE);
+    fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color) {
+        macroquad::prelude::draw_cube_wires(position, size, color);
     }
 }
 
@@ -119,7 +128,9 @@ async fn main() {
     let mut elapsed_time = 0.0;
     let mut world = World::default();
 
+    #[cfg(feature = "hot-reload")]
     let drawer: Box<dyn Drawer> = Box::new(DrawerImpl {});
+    #[cfg(feature = "hot-reload")]
     let screen = Screen { drawer };
 
     set_cursor_grab(true);
@@ -130,10 +141,13 @@ async fn main() {
         world.handle_input();
         while elapsed_time >= PHYSICS_FRAME_TIME {
             world.update();
-            hot_r_renderer::render_text(&screen);
             elapsed_time = 0.0;
         }
+        #[cfg(feature = "hot-reload")]
+        world.draw(&screen);
+        #[cfg(not(feature = "hot-reload"))]
         world.draw();
+        
         draw_text(&format!("FPS: {}", get_fps()), 10.0, 10.0, 20.0, WHITE);
         next_frame().await;
     }
