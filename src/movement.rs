@@ -1,4 +1,9 @@
-use shared::{config::{CHUNK_SIZE, GRAVITY, MOVE_SPEED, PHYSICS_FRAME_TIME}, types::{ChunkVec3, EntityType}, Vec3};
+use shared::{
+    config::{ CHUNK_SIZE, ENEMY_DEFAULT_MOVE_SPEED, GRAVITY, MOVE_SPEED, PHYSICS_FRAME_TIME },
+    types::{ ChunkVec3, EntityType, PossibleEnemySizes, RegularEnemies },
+    vec3,
+    Vec3,
+};
 
 pub struct MovementSystem;
 
@@ -37,21 +42,64 @@ impl MovementSystem {
         }
         *pos = new_pos;
     }
+    pub fn update_enemies(
+        positions: &mut Vec<ChunkVec3>,
+        velocities: &mut Vec<Vec3>,
+        sizes: &Vec<PossibleEnemySizes>,
+        chunk: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]
+    ) {
+        for (i, pos) in positions.iter_mut().enumerate() {
+            let hitbox = RegularEnemies::get_hitbox_from_size(sizes[i]);
+            let mut vel = velocities[i];
+            vel.y += GRAVITY * PHYSICS_FRAME_TIME;
 
+            let mut new_pos = ChunkVec3(
+                pos.0 +
+                    Vec3::new(0.0, vel.y, 0.0) * PHYSICS_FRAME_TIME * ENEMY_DEFAULT_MOVE_SPEED
+            );
+            if Self::check_collision(&(new_pos +
+                vec3(0.0, hitbox.y * 0.5 * vel.y.signum(), 0.0)), chunk) {
+                vel.y = 0.0;
+                new_pos = *pos;
+            }
+
+            new_pos = ChunkVec3(
+                new_pos.0  +
+                    Vec3::new(vel.x, 0.0, 0.0) * PHYSICS_FRAME_TIME * ENEMY_DEFAULT_MOVE_SPEED
+            );
+            if Self::check_collision(&(new_pos +
+                vec3(hitbox.x * 0.5 * vel.x.signum(), 0.0, 0.0)), chunk) {
+                vel.x = 0.0;
+                new_pos = ChunkVec3(pos.0 + Vec3::new(0.0, new_pos.0.y - pos.0.y, 0.0));
+            }
+
+            new_pos = ChunkVec3(
+                new_pos.0 +
+                    Vec3::new(0.0, 0.0, vel.z) * PHYSICS_FRAME_TIME * ENEMY_DEFAULT_MOVE_SPEED
+            );
+            if
+                Self::check_collision(
+                    &(new_pos + vec3(0.0, 0.0, hitbox.z * 0.5 * vel.z.signum())),
+                    chunk
+                )
+            {
+                vel.z = 0.0;
+                new_pos = ChunkVec3(
+                    pos.0 + Vec3::new(new_pos.0.x - pos.0.x, new_pos.0.y - pos.0.y, 0.0)
+                );
+            }
+            *pos = new_pos;
+        }
+    }
     fn check_collision(
         pos: &ChunkVec3,
         chunk: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]
     ) -> bool {
-        if pos.0.x < 0.0 || pos.0.z < 0.0 || pos.0.y < 0.0
-        {
+        if pos.0.x < 0.0 || pos.0.z < 0.0 || pos.0.y < 0.0 {
             return true;
         }
         let chunk_pos = pos.to_chunk(); // only cast if we know its a safe usize
-        if
-            chunk_pos.x >= CHUNK_SIZE ||
-            chunk_pos.z >= CHUNK_SIZE ||
-            chunk_pos.y >= CHUNK_SIZE
-        {
+        if chunk_pos.x >= CHUNK_SIZE || chunk_pos.z >= CHUNK_SIZE || chunk_pos.y >= CHUNK_SIZE {
             return true;
         }
         // Check if the entity at this position is solid

@@ -1,19 +1,61 @@
 use macroquad::prelude::*;
 use movement::MovementSystem;
-use shared::{config::{window_conf, CHUNK_SIZE, INITIAL_PLAYER_POS, JUMP_STRENGTH, LOOK_SPEED, PHYSICS_FRAME_TIME, WORLD_UP}, types::{ChunkVec3, EntityType, Player}};
+use shared::{
+    config::{
+        window_conf,
+        CHUNK_SIZE,
+        INITIAL_PLAYER_POS,
+        JUMP_STRENGTH,
+        LOOK_SPEED,
+        PHYSICS_FRAME_TIME,
+        WORLD_UP,
+    },
+    types::{
+        ChunkVec3,
+        EnemyHandle,
+        EntityType,
+        FlyingEnemies,
+        Player,
+        RegularEnemies,
+        SolidBlocks,
+    },
+};
 use util::vec3_no_y;
 pub mod movement;
 pub mod util;
-use render::{Drawer, Screen};
+use render::{ Drawer, Screen };
 #[hot_lib_reloader::hot_module(dylib = "render")]
 mod hot_r_renderer {
     hot_functions_from_file!("renderer/src/lib.rs");
+    hot_functions_from_file!("renderer/src/animation.rs");
     use render::Screen;
-    use shared::{config::{window_conf, CHUNK_SIZE, INITIAL_PLAYER_POS, JUMP_STRENGTH, LOOK_SPEED, PHYSICS_FRAME_TIME, WORLD_UP}, types::{ChunkVec3, EntityType, Player}, Vec3};
+    use shared::{
+        config::{
+            window_conf,
+            CHUNK_SIZE,
+            INITIAL_PLAYER_POS,
+            JUMP_STRENGTH,
+            LOOK_SPEED,
+            PHYSICS_FRAME_TIME,
+            WORLD_UP,
+        },
+        types::{
+            ChunkVec3,
+            EntityType,
+            Player,
+            AnimationState,
+            PossibleEnemySizes,
+            AnimationCallbackEvent,
+        },
+        Vec3,
+    };
 }
 struct World {
     player: Player,
     camera: Camera3D,
+    regular_enemies: RegularEnemies,
+    flying_enemies: FlyingEnemies,
+    solid_blocks: SolidBlocks,
     world_layout: [[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
     grabbed: bool,
 }
@@ -39,22 +81,47 @@ impl World {
                 [[EntityType::None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
                 CHUNK_SIZE as usize
             ],
+            flying_enemies: FlyingEnemies::new(),
+            regular_enemies: RegularEnemies::new(),
+            solid_blocks: SolidBlocks::new(),
         };
         for x in 0..CHUNK_SIZE as usize {
             for z in 0..CHUNK_SIZE as usize {
                 world.world_layout[x][z][0] = EntityType::SolidBlock;
+                world.solid_blocks.new_block(ChunkVec3(vec3(x as f32, 0.0, z as f32)));
             }
         }
+        world.world_layout[3][3][1] = EntityType::RegularEnemy(
+            world.regular_enemies.new_enemy(
+                ChunkVec3(vec3(3.0, 1.0, 3.0)),
+                vec3(1.0, 0.0, 0.0),
+                shared::types::PossibleEnemySizes::SMALL
+            )
+        );
         world
     }
     fn update(&mut self) {
-        MovementSystem::update_player(&mut self.player.pos, &mut self.player.vel, &self.world_layout);
+        MovementSystem::update_player(
+            &mut self.player.pos,
+            &mut self.player.vel,
+            &self.world_layout
+        );
+        MovementSystem::update_enemies(
+            &mut self.regular_enemies.positions,
+            &mut self.regular_enemies.velocities,
+            &self.regular_enemies.size,
+            &self.world_layout
+        );
     }
-
 
     fn handle_input(&mut self) {
         if is_key_pressed(KeyCode::Escape) {
             self.grabbed = !self.grabbed;
+            set_cursor_grab(self.grabbed);
+            show_mouse(!self.grabbed);
+        }
+        if is_mouse_button_pressed(MouseButton::Left) {
+            self.grabbed = true;
             set_cursor_grab(self.grabbed);
             show_mouse(!self.grabbed);
         }
@@ -107,14 +174,24 @@ impl World {
     }
 
     #[cfg(feature = "hot-reload")]
-    fn draw(&self, screen: &Screen) {
+    fn draw(&mut self, screen: &Screen) {
+        // needs to be mutable because of animation states, maybe refactor into a world separate struct?
         set_camera(&self.camera);
-        hot_r_renderer::render_world(screen, &self.world_layout);
-        hot_r_renderer::render_default_enemy(screen, vec3(5.0, 1.0, 5.0), Vec3::splat(1.0));
+        hot_r_renderer::update_enemy_animation(
+            &mut self.regular_enemies.animation_state,
+            get_frame_time()
+        );
+        hot_r_renderer::render_solid_blocks(screen, &self.solid_blocks.positions);
+        hot_r_renderer::render_regular_enemies(
+            screen,
+            &self.regular_enemies.positions,
+            &self.regular_enemies.velocities,
+            &self.regular_enemies.animation_state,
+            &self.regular_enemies.size
+        );
         set_default_camera()
     }
 }
-
 
 pub struct DrawerImpl;
 impl Drawer for DrawerImpl {
