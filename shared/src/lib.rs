@@ -7,3 +7,4 @@ pub use macroquad::{
     models::{self, draw_cube_wires},
     prelude::*,
 };
+pub use once_cell::sync::Lazy;

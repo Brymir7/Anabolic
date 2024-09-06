@@ -1,4 +1,6 @@
-use macroquad::prelude::*;
+use std::collections::HashMap;
+
+use macroquad::{ prelude::*, text };
 use movement::MovementSystem;
 use shared::{
     config::{
@@ -18,34 +20,43 @@ use shared::{
         Player,
         RegularEnemies,
         SolidBlocks,
+        Textures,
     },
+    Lazy,
 };
-use util::vec3_no_y;
+use shooting::shotgun_shoot;
+use util::{ load_and_convert_texture, vec3_no_y };
 pub mod movement;
 pub mod util;
+pub mod spawning;
+pub mod shooting;
+
 use render::{ Drawer, Screen };
+
+static TEXTURE_TYPE_TO_TEXTURE2D: Lazy<HashMap<Textures, Texture2D>> = Lazy::new(|| {
+    let mut map = HashMap::new();
+    map.insert(
+        Textures::Weapon,
+        load_and_convert_texture(include_bytes!("../textures/weapon.png"), ImageFormat::Png)
+    );
+
+    map
+});
 #[hot_lib_reloader::hot_module(dylib = "render")]
 mod hot_r_renderer {
     hot_functions_from_file!("renderer/src/lib.rs");
     hot_functions_from_file!("renderer/src/animation.rs");
+    hot_functions_from_file!("renderer/src/debug.rs");
     use render::Screen;
     use shared::{
-        config::{
-            window_conf,
-            CHUNK_SIZE,
-            INITIAL_PLAYER_POS,
-            JUMP_STRENGTH,
-            LOOK_SPEED,
-            PHYSICS_FRAME_TIME,
-            WORLD_UP,
-        },
+        config::CHUNK_SIZE,
         types::{
             ChunkVec3,
             EntityType,
-            Player,
             AnimationState,
             PossibleEnemySizes,
             AnimationCallbackEvent,
+            WeaponType,
         },
         Vec3,
     };
@@ -63,12 +74,7 @@ struct World {
 impl World {
     fn default() -> Self {
         let mut world = World {
-            player: Player {
-                pos: ChunkVec3(INITIAL_PLAYER_POS),
-                vel: Vec3::ZERO,
-                yaw: 0.77,
-                pitch: 0.0,
-            },
+            player: Player::default(),
             camera: Camera3D {
                 position: INITIAL_PLAYER_POS + WORLD_UP,
                 up: WORLD_UP,
@@ -98,6 +104,13 @@ impl World {
                 shared::types::PossibleEnemySizes::SMALL
             )
         );
+        world.world_layout[5][5][5] = EntityType::FlyingEnemy(
+            world.flying_enemies.new_enemy(
+                ChunkVec3(vec3(5.0, 5.0, 5.0)),
+                vec3(1.0, 0.0, 0.0),
+                shared::types::PossibleEnemySizes::SMALL
+            )
+        );
         world
     }
     fn update(&mut self) {
@@ -106,11 +119,17 @@ impl World {
             &mut self.player.vel,
             &self.world_layout
         );
-        MovementSystem::update_enemies(
+        MovementSystem::update_ground_enemies(
             &mut self.regular_enemies.positions,
             &mut self.regular_enemies.velocities,
             &self.regular_enemies.size,
-            &self.world_layout
+            &mut self.world_layout
+        );
+        MovementSystem::update_flying_enemies(
+            &mut self.flying_enemies.positions,
+            &mut self.flying_enemies.velocities,
+            &self.flying_enemies.size,
+            &mut self.world_layout
         );
     }
 
@@ -124,6 +143,12 @@ impl World {
             self.grabbed = true;
             set_cursor_grab(self.grabbed);
             show_mouse(!self.grabbed);
+            let front = vec3(
+                self.player.yaw.cos() * self.player.pitch.cos(),
+                self.player.pitch.sin(),
+                self.player.yaw.sin() * self.player.pitch.cos()
+            ).normalize();
+            shotgun_shoot(self.player.pos + vec3(0.0, 1.0, 0.0), front, &self.world_layout);
         }
         let delta = get_frame_time();
         if self.grabbed {
@@ -177,10 +202,12 @@ impl World {
     fn draw(&mut self, screen: &Screen) {
         // needs to be mutable because of animation states, maybe refactor into a world separate struct?
         set_camera(&self.camera);
-        hot_r_renderer::update_enemy_animation(
+
+        hot_r_renderer::update_animations(
             &mut self.regular_enemies.animation_state,
             get_frame_time()
         );
+        hot_r_renderer::update_animation(&mut self.player.animation_state, get_frame_time());
         hot_r_renderer::render_solid_blocks(screen, &self.solid_blocks.positions);
         hot_r_renderer::render_regular_enemies(
             screen,
@@ -189,7 +216,30 @@ impl World {
             &self.regular_enemies.animation_state,
             &self.regular_enemies.size
         );
-        set_default_camera()
+        hot_r_renderer::render_flying_enemies(
+            screen,
+            &self.flying_enemies.positions,
+            &self.flying_enemies.velocities,
+            &self.regular_enemies.animation_state,
+            &self.regular_enemies.size
+        );
+        hot_r_renderer::render_enemy_world_positions(
+            screen,
+            &self.world_layout,
+            &self.flying_enemies.positions,
+            &self.regular_enemies.positions
+        );
+        set_default_camera();
+        let weapon_texture = TEXTURE_TYPE_TO_TEXTURE2D.get(&Textures::Weapon).expect(
+            "Failed to load weapon"
+        );
+        hot_r_renderer::render_player_pov(
+            screen,
+            weapon_texture.width(),
+            weapon_texture.height(),
+            self.player.get_current_weapon().w_type,
+            &self.player.animation_state
+        );
     }
 }
 
@@ -197,6 +247,51 @@ pub struct DrawerImpl;
 impl Drawer for DrawerImpl {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color) {
         macroquad::prelude::draw_cube_wires(position, size, color);
+    }
+    fn draw_rectangle(&self, position: Vec2, width: f32, height: f32, color: Color) {
+        macroquad::prelude::draw_rectangle(position.x, position.y, width, height, color);
+    }
+    fn draw_triangle(&self, position1: Vec2, position2: Vec2, position3: Vec2, color: Color) {
+        macroquad::prelude::draw_triangle(position1, position2, position3, color);
+    }
+    fn draw_rectangle_lines_ex(
+        &self,
+        position: Vec2,
+        width: f32,
+        height: f32,
+        params: DrawRectangleParams
+    ) {
+        macroquad::prelude::draw_rectangle_lines_ex(
+            position.x,
+            position.y,
+            width,
+            height,
+            1.0,
+            params
+        );
+    }
+    fn draw_rectangle_lines(&self, position: Vec2, width: f32, height: f32, color: Color) {
+        macroquad::prelude::draw_rectangle_lines(position.x, position.y, width, height, 1.0, color);
+    }
+    fn draw_circle_lines(&self, position: Vec2, radius: f32, color: Color) {
+        macroquad::prelude::draw_circle_lines(position.x, position.y, radius, 1.0, color);
+    }
+    fn draw_texture_ex(
+        &self,
+        texture: &Textures,
+        x: f32,
+        y: f32,
+        color: Color,
+        params: DrawTextureParams
+    ) {
+        match texture {
+            Textures::Weapon => {
+                let weapon_texture = TEXTURE_TYPE_TO_TEXTURE2D.get(&Textures::Weapon).expect(
+                    "Failed to load weapon"
+                );
+                macroquad::prelude::draw_texture_ex(weapon_texture, x, y, color, params);
+            }
+        }
     }
 }
 

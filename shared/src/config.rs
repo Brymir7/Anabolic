@@ -11,11 +11,13 @@ pub const MAX_BLOCK_TYPES: u8 = u8::MAX;
 pub const GRAVITY: f32 = -9.81;
 pub const JUMP_STRENGTH: f32 = 3.0;
 pub const TILE_SIZE: f32 = 1.0;
+pub const SCREEN_WIDTH: i32 = 1920;
+pub const SCREEN_HEIGHT: i32 = 1080;
 pub fn window_conf() -> Conf {
     Conf {
         window_title: "Anabolic".to_owned(),
-        window_width: 1920,
-        window_height: 1080,
+        window_width: SCREEN_WIDTH,
+        window_height: SCREEN_HEIGHT,
         window_resizable: false,
         high_dpi: true,
         fullscreen: false,

@@ -1,10 +1,46 @@
+use std::{ collections::{HashMap, VecDeque}, f32::consts::{ FRAC_PI_2, FRAC_PI_4, FRAC_PI_8, PI } };
+
 use shared::{
-    config::{ CHUNK_SIZE, TILE_SIZE }, draw_cube_wires, types::{ AnimationState, ChunkVec3, EntityType, PossibleEnemySizes, RegularEnemies }, vec3, Color, Vec3, BLUE, GRAY, GREEN, RED, YELLOW // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
+    config::{ SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE },
+    types::{
+        AnimationState, ChunkVec3, FlyingEnemies, PossibleEnemySizes, RegularEnemies, Textures, WeaponType
+    },
+    vec2,
+    vec3,
+    Color,
+    DrawRectangleParams,
+    DrawTextureParams,
+    Vec2,
+    Vec3,
+    GRAY,
+    GREEN,
+    RED,
+    WHITE,
+    YELLOW, // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
 };
 pub mod animation;
-
+pub mod debug;
 pub trait Drawer {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color);
+    fn draw_rectangle(&self, position: Vec2, width: f32, height: f32, color: Color);
+    fn draw_rectangle_lines_ex(
+        &self,
+        position: Vec2,
+        width: f32,
+        height: f32,
+        params: DrawRectangleParams
+    );
+    fn draw_rectangle_lines(&self, position: Vec2, width: f32, height: f32, color: Color);
+    fn draw_triangle(&self, pos1: Vec2, pos2: Vec2, pos3: Vec2, color: Color);
+    fn draw_circle_lines(&self, position: Vec2, radius: f32, color: Color);
+    fn draw_texture_ex(
+        &self,
+        texture: &Textures,
+        x: f32,
+        y: f32,
+        color: Color,
+        params: DrawTextureParams
+    );
 }
 pub struct Screen {
     pub drawer: Box<dyn Drawer>,
@@ -44,7 +80,35 @@ pub fn render_regular_enemies(
             animations[i].current_step,
             animations[i].max_step
         );
-
+    }
+}
+#[no_mangle]
+pub fn render_flying_enemies(
+    screen: &Screen,
+    positions: &Vec<ChunkVec3>,
+    velocities: &Vec<Vec3>,
+    animations: &Vec<AnimationState>,
+    sizes: &Vec<PossibleEnemySizes>
+) {
+    for (i, enemy) in positions.iter().enumerate() {
+        #[cfg(not(feature = "debug"))]
+        render_flying_enemy(
+            screen,
+            *enemy,
+            velocities[i],
+            sizes[i],
+            animations[i].current_step,
+            animations[i].max_step
+        );
+        #[cfg(feature = "debug")]
+        render_flying_enemy_with_hitbox(
+            screen,
+            *enemy,
+            velocities[i],
+            sizes[i],
+            animations[i].current_step,
+            animations[i].max_step
+        );
     }
 }
 #[no_mangle]
@@ -65,7 +129,7 @@ pub fn render_default_enemy(
     let is_x_dominant = vel.x < vel.z;
     let x_multiplier = is_x_dominant as u8;
     let z_multiplier = !is_x_dominant as u8;
-    println!("{}", x_multiplier);
+
     let pos = pos.0;
 
     // HEAD
@@ -97,24 +161,29 @@ pub fn render_default_enemy(
 
     // Right leg (moves forward)
     screen.drawer.draw_cube_wires(
-        pos + vec3(
-            0.25 * (x_multiplier as f32) + leg_swing_offset * (z_multiplier as f32), 
-            -0.75, 
-            0.25 * (z_multiplier as f32) + leg_swing_offset * (x_multiplier as f32)
-        ) * scale,
+        pos +
+            vec3(
+                0.25 * (x_multiplier as f32) + leg_swing_offset * (z_multiplier as f32),
+                -0.75,
+                0.25 * (z_multiplier as f32) + leg_swing_offset * (x_multiplier as f32)
+            ) *
+                scale,
         Vec3::new(0.2, 0.5, 0.2) * scale,
         RED
     );
-    
+
     // Left leg (moves backward)
     screen.drawer.draw_cube_wires(
-        pos + vec3(
-            -0.25 * (x_multiplier as f32) - leg_swing_offset * (z_multiplier as f32), 
-            -0.75, 
-            -0.25 * (z_multiplier as f32) - leg_swing_offset * (x_multiplier as f32)
-        ) * scale,
+        pos +
+            vec3(
+                -0.25 * (x_multiplier as f32) - leg_swing_offset * (z_multiplier as f32),
+                -0.75,
+                -0.25 * (z_multiplier as f32) - leg_swing_offset * (x_multiplier as f32)
+            ) *
+                scale,
         Vec3::new(0.2, 0.5, 0.2) * scale,
-        RED);
+        RED
+    );
 }
 
 #[no_mangle]
@@ -130,14 +199,10 @@ pub fn render_default_enemy_with_hitbox(
     let is_x_dominant = vel.x < vel.z;
     let x_multiplier = is_x_dominant as u8;
     let z_multiplier = !is_x_dominant as u8;
-    println!("{}", x_multiplier);
+
     let pos = pos.0;
-    // HITBOX 
-    screen.drawer.draw_cube_wires(
-        pos,
-        RegularEnemies::get_hitbox_from_size(size),
-        GRAY,
-    );
+    // HITBOX
+    screen.drawer.draw_cube_wires(pos, RegularEnemies::get_hitbox_from_size(size), GRAY);
     // HEAD
     screen.drawer.draw_cube_wires(
         pos + vec3(0.0, 0.75, 0.0) * scale,
@@ -167,24 +232,93 @@ pub fn render_default_enemy_with_hitbox(
 
     // Right leg (moves forward)
     screen.drawer.draw_cube_wires(
-        pos + vec3(
-            0.25 * (x_multiplier as f32) + leg_swing_offset * (z_multiplier as f32), 
-            -0.75, 
-            0.25 * (z_multiplier as f32) + leg_swing_offset * (x_multiplier as f32)
-        ) * scale,
+        pos +
+            vec3(
+                0.25 * (x_multiplier as f32) + leg_swing_offset * (z_multiplier as f32),
+                -0.75,
+                0.25 * (z_multiplier as f32) + leg_swing_offset * (x_multiplier as f32)
+            ) *
+                scale,
         Vec3::new(0.2, 0.5, 0.2) * scale,
         RED
     );
-    
+
     // Left leg (moves backward)
     screen.drawer.draw_cube_wires(
-        pos + vec3(
-            -0.25 * (x_multiplier as f32) - leg_swing_offset * (z_multiplier as f32), 
-            -0.75, 
-            -0.25 * (z_multiplier as f32) - leg_swing_offset * (x_multiplier as f32)
-        ) * scale,
+        pos +
+            vec3(
+                -0.25 * (x_multiplier as f32) - leg_swing_offset * (z_multiplier as f32),
+                -0.75,
+                -0.25 * (z_multiplier as f32) - leg_swing_offset * (x_multiplier as f32)
+            ) *
+                scale,
         Vec3::new(0.2, 0.5, 0.2) * scale,
-        RED);
+        RED
+    );
+}
+#[no_mangle]
+pub fn render_flying_enemy(
+    screen: &Screen,
+    pos: ChunkVec3,
+    vel: Vec3,
+    size: PossibleEnemySizes,
+    animation_step: f32,
+    max_animation_step: f32
+) {
+    let scale = FlyingEnemies::get_vec3_size(size);
+    let pos = pos.0;
+    let size_animation = (animation_step * PI).sin() * 0.5;
+    // BODY
+    screen.drawer.draw_cube_wires(pos, Vec3::splat(1.0) * scale * size_animation, RED);
+    screen.drawer.draw_cube_wires(pos, Vec3::splat(0.5) * scale * size_animation, YELLOW);
+   
+}
 
-    
+#[no_mangle]
+pub fn render_flying_enemy_with_hitbox(
+    screen: &Screen,
+    pos: ChunkVec3,
+    vel: Vec3,
+    size: PossibleEnemySizes,
+    animation_step: f32,
+    max_animation_step: f32
+) {
+    let scale = FlyingEnemies::get_vec3_size(size);
+    let pos = pos.0;
+    let size_animation = ((animation_step * PI).sin() * 2.0).max(0.5);
+    // HITBOX
+    screen.drawer.draw_cube_wires(pos, RegularEnemies::get_hitbox_from_size(size), GRAY);
+
+    screen.drawer.draw_cube_wires(pos, Vec3::splat(1.0) * scale * size_animation, RED);
+    screen.drawer.draw_cube_wires(pos, Vec3::splat(0.5) * scale * size_animation, YELLOW);
+   
+}
+
+#[no_mangle]
+pub fn render_player_pov(
+    screen: &Screen,
+    texture_w: f32,
+    texture_h: f32,
+    w_type: WeaponType,
+    animation_state: &AnimationState
+) {
+    const SCREEN_X_OFFSET: f32 = (SCREEN_WIDTH as f32) / 2.0;
+    const SCREEN_Y_OFFSET: f32 = (SCREEN_HEIGHT as f32) / 2.0;
+    let bobbing = (animation_state.current_step * PI).sin() * 0.25;
+    // CROSSHAIR
+    screen.drawer.draw_circle_lines(vec2(SCREEN_X_OFFSET, SCREEN_Y_OFFSET), 5.0, WHITE);
+    match w_type {
+        WeaponType::Shotgun => {
+            screen.drawer.draw_texture_ex(
+                &Textures::Weapon,
+                SCREEN_X_OFFSET - texture_w * 0.5 + bobbing * texture_w * 2.0,
+                (SCREEN_HEIGHT as f32) * 0.85 - texture_h,
+                Color::from_rgba(255, 255, 255, 255),
+                DrawTextureParams {
+                    dest_size: Some(Vec2::new(texture_w * 2.0, texture_h * 2.0)),
+                    ..Default::default()
+                }
+            )
+        }
+    }
 }

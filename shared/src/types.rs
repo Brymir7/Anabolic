@@ -1,40 +1,44 @@
 use macroquad::math::Vec3;
 #[derive(Clone, Copy, Debug)]
 pub struct ChunkVec3(pub Vec3);
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ChunkPos {
     pub x: u8,
     pub z: u8,
     pub y: u8,
 }
-impl ChunkPos {
-    fn new(x: u8, z: u8, y: u8) -> Self {
-        ChunkPos {
-            x,
-            z,
-            y,
-        }
-    }
+
+
+#[derive(Clone, Copy)]
+pub enum WeaponType {
+    Shotgun,
+    // ChainLightning,
+    // Sniper,
+    // Pistol,
 }
-impl ChunkVec3 {
-    pub fn to_chunk(&self) -> ChunkPos {
-        let data = self.0;
-        assert!(data.x.round() < 255.0 && data.x >= 0.0);
-        assert!(data.y.round() < 255.0 && data.y >= 0.0);
-        assert!(data.z.round() < 255.0 && data.z >= 0.0);
-        return ChunkPos::new(data.x.round() as u8, data.z.round() as u8, data.y.round() as u8);
-    }
+pub struct Weapon {
+    pub damage: f32,
+    pub reload_speed: f32,
+    pub time_last_reload: f32,
+    pub w_type: WeaponType,
 }
+pub struct CurrWeapon(pub usize);
+pub struct MaxWeapon(pub usize);
 pub struct Player {
     pub pos: ChunkVec3,
     pub vel: Vec3,
     pub yaw: f32,
     pub pitch: f32,
+    pub weapon_unlocked: MaxWeapon,
+    pub weapons: [Weapon; 1],
+    pub curr_weapon: CurrWeapon,
+    pub animation_state: AnimationState,
 }
-#[derive(Clone, Copy, Debug)]
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EnemyHandle(pub u16);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EntityType {
     SolidBlock,
     Player,
@@ -85,4 +89,9 @@ pub struct RegularEnemies {
 
 pub struct SolidBlocks {
     pub positions: Vec<ChunkVec3>,
+}
+
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
+pub enum Textures {
+    Weapon,
 }
