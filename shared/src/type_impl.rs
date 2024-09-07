@@ -1,11 +1,11 @@
 use std::ops::Add;
 
-use macroquad::math::Vec3;
+use macroquad::math::{vec3, Vec3};
 
 use crate::{
     config::{CHUNK_SIZE, INITIAL_PLAYER_POS},
     types::{
-        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec1, ChunkVec3, CurrWeapon, EnemyHandle, FlyingEnemies, MaxWeapon, Player, PossibleEnemySizes, RegularEnemies, SolidBlocks, Weapon, WeaponType
+        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec1, ChunkVec3, CurrWeapon, EnemyHandle, EnemyIdentifier, FlyingEnemies, MaxWeapon, Player, PossibleEnemySizes, RegularEnemies, SolidBlocks, Weapon, WeaponType, WorldEvent
     },
 };
 
@@ -16,18 +16,21 @@ impl RegularEnemies {
             velocities: Vec::new(),
             animation_state: Vec::new(),
             size: Vec::new(),
+            healths: Vec::new(),
         }
     }
     pub fn new_enemy(
         &mut self,
         pos: ChunkVec3,
         vel: Vec3,
-        size: PossibleEnemySizes
+        size: PossibleEnemySizes,
+        health: u8,
     ) -> EnemyHandle {
         self.positions.push(pos);
         self.velocities.push(vel);
         self.animation_state.push(AnimationState::default());
         self.size.push(size);
+        self.healths.push(health);
         return EnemyHandle((self.positions.len() - 1) as u16);
     }
     pub fn get_vec3_size(size: PossibleEnemySizes) -> Vec3 {
@@ -46,6 +49,31 @@ impl RegularEnemies {
             PossibleEnemySizes::BOSS => Vec3::splat(1.25) * 2.0,
         }
     }
+    pub fn remove_enemy(&mut self, h: EnemyHandle) {
+        let index = h.0 as usize;
+        if index < self.positions.len() {
+            self.positions.swap_remove(index);
+            self.velocities.swap_remove(index);
+            self.animation_state.swap_remove(index);
+            self.size.swap_remove(index);
+            self.healths.swap_remove(index);
+        }
+    }
+    pub fn get_occupied_tiles(pos: &ChunkVec3, hitbox: &Vec3) -> Vec<ChunkPos> {
+        let mut res =Vec::new();
+        let start = ChunkVec3(pos.0 - *hitbox*0.5).to_chunk();
+        let end = ChunkVec3(pos.0 + *hitbox*0.5).to_chunk();
+        for x in start.x..=end.x {
+            for y in start.y..=end.y {
+                for z in start.z..=end.z {
+                    if x < CHUNK_SIZE && y < CHUNK_SIZE && z < CHUNK_SIZE {
+                        res.push(ChunkPos::new(x, y, z));
+                    }
+                }
+            }
+        }
+        res
+    } 
 }
 impl FlyingEnemies {
     pub fn new() -> Self {
@@ -54,18 +82,21 @@ impl FlyingEnemies {
             velocities: Vec::new(),
             animation_state: Vec::new(),
             size: Vec::new(),
+            healths: Vec::new(),
         }
     }
     pub fn new_enemy(
         &mut self,
         pos: ChunkVec3,
         vel: Vec3,
-        size: PossibleEnemySizes
+        size: PossibleEnemySizes,
+        health: u8,
     ) -> EnemyHandle {
         self.positions.push(pos);
         self.velocities.push(vel);
         self.animation_state.push(AnimationState::default());
         self.size.push(size);
+        self.healths.push(health);
         return EnemyHandle((self.positions.len() - 1) as u16);
     }
     pub fn get_vec3_size(size: PossibleEnemySizes) -> Vec3 {
@@ -76,6 +107,16 @@ impl FlyingEnemies {
             PossibleEnemySizes::BOSS => Vec3::splat(1.25),
         }
     }
+    pub fn remove_enemy(&mut self, h: EnemyHandle) {
+        let index = h.0 as usize;
+        if index < self.positions.len() {
+            self.positions.swap_remove(index);
+            self.velocities.swap_remove(index);
+            self.animation_state.swap_remove(index);
+            self.size.swap_remove(index);
+            self.healths.swap_remove(index);
+        }
+    }
     pub fn get_hitbox_from_size(size: PossibleEnemySizes) -> Vec3 {
         match size {
             PossibleEnemySizes::SMALL => Vec3::splat(0.25) * 2.0,
@@ -84,6 +125,21 @@ impl FlyingEnemies {
             PossibleEnemySizes::BOSS => Vec3::splat(1.25) * 2.0,
         }
     }
+    pub fn get_occupied_tiles(pos: &ChunkVec3, hitbox: &Vec3) -> Vec<ChunkPos> {
+        let mut res =Vec::new();
+        let start = ChunkVec3(pos.0 - *hitbox*0.5).to_chunk();
+        let end = ChunkVec3(pos.0 + *hitbox*0.5).to_chunk();
+        for x in start.x..=end.x {
+            for y in start.y..=end.y {
+                for z in start.z..=end.z {
+                    if x < CHUNK_SIZE && y < CHUNK_SIZE && z < CHUNK_SIZE {
+                        res.push(ChunkPos::new(x, y, z));
+                    }
+                }
+            }
+        }
+        res
+    } 
 }
 impl SolidBlocks {
     pub fn new() -> Self {
@@ -151,6 +207,7 @@ impl Player {
     pub fn swap_next_weapon(&mut self) {
         self.curr_weapon = CurrWeapon((self.curr_weapon.0 + 1) % (self.weapon_unlocked.0 - 1));
     }
+
 }
 
 impl ChunkPos {
@@ -178,5 +235,21 @@ impl ChunkVec1 {
         let data = data.clamp(0.0, CHUNK_SIZE as f32 - 0.51); // small enough to not get rounded to chunk size
         assert!(data.round() < 255.0 && data >= 0.0);
         return data.round() as u8;
+    }
+}
+
+
+impl EnemyIdentifier {
+    pub fn flying_enemy_identifier(h: EnemyHandle) -> Self {
+        EnemyIdentifier {
+            flying: true,
+            handle: h,
+        }
+    }
+    pub fn regular_enemy_identifier(h: EnemyHandle) -> Self {
+        EnemyIdentifier {
+            flying: false,
+            handle: h,
+        }
     }
 }

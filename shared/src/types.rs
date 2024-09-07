@@ -81,12 +81,14 @@ pub struct FlyingEnemies {
     pub velocities: Vec<Vec3>,
     pub animation_state: Vec<AnimationState>,
     pub size: Vec<PossibleEnemySizes>,
+    pub healths: Vec<u8>,
 }
 pub struct RegularEnemies {
     pub positions: Vec<ChunkVec3>,
     pub velocities: Vec<Vec3>,
     pub animation_state: Vec<AnimationState>,
     pub size: Vec<PossibleEnemySizes>,
+    pub healths: Vec<u8>,
 }
 
 pub struct SolidBlocks {
@@ -97,12 +99,13 @@ pub struct SolidBlocks {
 pub enum Textures {
     Weapon,
 }
-
+#[derive(Debug)]
 pub struct EnemyIdentifier {
     pub flying: bool,
     pub handle: EnemyHandle,
 }
+#[derive(Debug)]
 pub enum WorldEvent {
     KillEnemy(EnemyIdentifier),
-    
+    HitEnemy(EnemyIdentifier),
 }

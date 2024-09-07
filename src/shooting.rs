@@ -1,10 +1,26 @@
-use shared::{ config::CHUNK_SIZE, types::{ ChunkVec3, EntityType }, Vec3 };
+use shared::{
+    config::CHUNK_SIZE,
+    types::{
+        ChunkVec3,
+        EnemyIdentifier,
+        EntityType,
+        FlyingEnemies,
+        Player,
+        SolidBlocks,
+        WeaponType,
+        WorldEvent,
+    },
+    vec3,
+    Vec3,
+};
+
+use crate::World;
 
 pub fn shotgun_shoot(
     origin: ChunkVec3,
     target_dir: Vec3,
     world_layout: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]
-) {
+) -> Option<WorldEvent> {
     let relative_chunk_dist_x = 1.0 / target_dir.x.abs();
     let relative_chunk_dist_y = 1.0 / target_dir.y.abs();
     let relative_chunk_dist_z = 1.0 / target_dir.z.abs();
@@ -43,21 +59,16 @@ pub fn shotgun_shoot(
         let entity =
             world_layout[curr_map_tile_x as usize][curr_map_tile_y as usize]
                 [curr_map_tile_z as usize];
-        if
-            entity != EntityType::None &&
-            entity != EntityType::SolidBlock &&
-            entity != EntityType::Player
-        {
-            println!(
-                "Hit entity {:?} at ({}, {}, {})",
-                entity,
-                curr_map_tile_x,
-                curr_map_tile_y,
-                curr_map_tile_z
-            );
-            break;
+        match entity {
+            EntityType::FlyingEnemy(h) => {
+                return Some(WorldEvent::HitEnemy(EnemyIdentifier::flying_enemy_identifier(h)));
+            }
+            EntityType::RegularEnemy(h) => {
+                println!("hit regular enemy {:?}", h);
+                return Some(WorldEvent::HitEnemy(EnemyIdentifier::regular_enemy_identifier(h)));
+            }
+            _ => {}
         }
-
 
         if dist_side_x < dist_side_y && dist_side_x < dist_side_z {
             // Cross the YZ plane
@@ -74,10 +85,27 @@ pub fn shotgun_shoot(
         }
     }
 
-    println!(
-        "Shot exited the chunk at ({}, {}, {})",
-        curr_map_tile_x,
-        curr_map_tile_y,
-        curr_map_tile_z
-    );
+    return None;
+}
+
+pub fn shoot(
+    player: &mut Player,
+    world_layout: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]
+) -> Vec<WorldEvent> {
+    let mut res = Vec::new();
+    match player.get_current_weapon().w_type {
+        WeaponType::Shotgun => {
+            let front = vec3(
+                player.yaw.cos() * player.pitch.cos(),
+                player.pitch.sin(),
+                player.yaw.sin() * player.pitch.cos()
+            ).normalize();
+            // make player a bit higher, so that when he looks down on smaller opponents he can hit them at their feet
+            let event = shotgun_shoot(player.pos + vec3(0.0, 0.4, 0.0), front, world_layout);
+            if let Some(event) = event {
+                res.push(event);
+            }
+        }
+    }
+    res
 }
