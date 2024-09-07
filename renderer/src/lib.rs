@@ -1,9 +1,18 @@
-use std::{ collections::{HashMap, VecDeque}, f32::consts::{ FRAC_PI_2, FRAC_PI_4, FRAC_PI_8, PI } };
+use std::{
+    collections::{ HashMap, VecDeque },
+    f32::consts::{ FRAC_PI_2, FRAC_PI_4, FRAC_PI_8, PI },
+};
 
 use shared::{
     config::{ SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE },
     types::{
-        AnimationState, ChunkVec3, FlyingEnemies, PossibleEnemySizes, RegularEnemies, Textures, WeaponType
+        AnimationState,
+        ChunkVec3,
+        FlyingEnemies,
+        PossibleEnemySizes,
+        RegularEnemies,
+        Textures,
+        WeaponType,
     },
     vec2,
     vec3,
@@ -101,7 +110,6 @@ pub fn render_flying_enemies(
             animations[i].max_step
         );
         #[cfg(feature = "debug")]
-
         render_flying_enemy_with_hitbox(
             screen,
             *enemy,
@@ -197,7 +205,7 @@ pub fn render_default_enemy_with_hitbox(
     max_animation_step: f32
 ) {
     let scale = RegularEnemies::get_vec3_size(size);
-    let is_x_dominant = vel.x < vel.z;
+    let is_x_dominant = vel.x.abs() < vel.z.abs();
     let x_multiplier = is_x_dominant as u8;
     let z_multiplier = !is_x_dominant as u8;
 
@@ -272,7 +280,6 @@ pub fn render_flying_enemy(
     // BODY
     screen.drawer.draw_cube_wires(pos, Vec3::splat(1.0) * scale * size_animation, RED);
     screen.drawer.draw_cube_wires(pos, Vec3::splat(0.5) * scale * size_animation, YELLOW);
-   
 }
 
 #[no_mangle]
@@ -292,7 +299,6 @@ pub fn render_flying_enemy_with_hitbox(
 
     screen.drawer.draw_cube_wires(pos, Vec3::splat(1.0) * scale * size_animation, RED);
     screen.drawer.draw_cube_wires(pos, Vec3::splat(0.5) * scale * size_animation, YELLOW);
-   
 }
 
 #[no_mangle]

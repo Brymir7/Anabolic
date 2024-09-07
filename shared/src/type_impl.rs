@@ -3,7 +3,7 @@ use std::ops::Add;
 use macroquad::math::Vec3;
 
 use crate::{
-    config::INITIAL_PLAYER_POS,
+    config::{CHUNK_SIZE, INITIAL_PLAYER_POS},
     types::{
         AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec1, ChunkVec3, CurrWeapon, EnemyHandle, FlyingEnemies, MaxWeapon, Player, PossibleEnemySizes, RegularEnemies, SolidBlocks, Weapon, WeaponType
     },
@@ -165,6 +165,7 @@ impl ChunkPos {
 impl ChunkVec3 {
     pub fn to_chunk(&self) -> ChunkPos {
         let data = self.0;
+        let data = data.clamp(Vec3::splat(0.0), Vec3::splat(CHUNK_SIZE as f32 - 0.51)); // small enough to not get rounded to chunk size
         assert!(data.x.round() < 255.0 && data.x >= 0.0);
         assert!(data.y.round() < 255.0 && data.y >= 0.0);
         assert!(data.z.round() < 255.0 && data.z >= 0.0);
@@ -174,6 +175,7 @@ impl ChunkVec3 {
 impl ChunkVec1 {
     pub fn to_chunk_axis_idx(&self) -> u8 {
         let data = self.0;
+        let data = data.clamp(0.0, CHUNK_SIZE as f32 - 0.51); // small enough to not get rounded to chunk size
         assert!(data.round() < 255.0 && data >= 0.0);
         return data.round() as u8;
     }

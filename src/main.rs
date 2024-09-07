@@ -1,4 +1,4 @@
-use std::{ collections::HashMap, ops::Sub };
+use std::{ collections::HashMap, ops::Sub, process::exit };
 
 use macroquad::{ prelude::*, text };
 use movement::MovementSystem;
@@ -106,27 +106,27 @@ impl World {
                 shared::types::PossibleEnemySizes::MEDIUM
             )
         );
-        world.world_layout[5][1][3] = EntityType::RegularEnemy(
+        world.world_layout[12][1][3] = EntityType::RegularEnemy(
             world.regular_enemies.new_enemy(
-                ChunkVec3(vec3(3.0, 3.0, 6.0)),
-                vec3(1.0, 0.0, 0.0),
+                ChunkVec3(vec3(7.0, 3.0, 3.0)),
+                vec3(-1.0, 0.0, 0.0),
                 shared::types::PossibleEnemySizes::SMALL
             )
         );
-        world.world_layout[7][1][3] = EntityType::RegularEnemy(
-            world.regular_enemies.new_enemy(
-                ChunkVec3(vec3(3.0, 3.0, 10.0)),
-                vec3(1.0, 0.0, 0.0),
-                shared::types::PossibleEnemySizes::LARGE
-            )
-        );
-        world.world_layout[5][5][5] = EntityType::FlyingEnemy(
-            world.flying_enemies.new_enemy(
-                ChunkVec3(vec3(5.0, 5.0, 5.0)),
-                vec3(1.0, 0.0, 0.0),
-                shared::types::PossibleEnemySizes::SMALL
-            )
-        );
+        // world.world_layout[7][1][3] = EntityType::RegularEnemy(
+        //     world.regular_enemies.new_enemy(
+        //         ChunkVec3(vec3(3.0, 3.0, 10.0)),
+        //         vec3(1.0, 0.0, 0.0),
+        //         shared::types::PossibleEnemySizes::LARGE
+        //     )
+        // );
+        // world.world_layout[5][5][5] = EntityType::FlyingEnemy(
+        //     world.flying_enemies.new_enemy(
+        //         ChunkVec3(vec3(5.0, 5.0, 5.0)),
+        //         vec3(1.0, 0.0, 0.0),
+        //         shared::types::PossibleEnemySizes::SMALL
+        //     )
+        // );
         world
     }
     fn update(&mut self) {
@@ -169,7 +169,7 @@ impl World {
                 self.player.pitch.sin(),
                 self.player.yaw.sin() * self.player.pitch.cos()
             ).normalize();
-            shotgun_shoot(self.player.pos, front, &self.world_layout);
+            shotgun_shoot(self.player.pos + vec3(0.0, 0.4, 0.0), front, &self.world_layout); // make player a bit higher, so that when he looks down on smaller opponents he can hit them at their feet
         }
         let delta = get_frame_time();
         if self.grabbed {
@@ -203,21 +203,12 @@ impl World {
                 player_vel.y = JUMP_STRENGTH;
             }
             self.player.vel = player_vel;
-            self.camera.position = self.player.pos.0;
+            self.camera.position = self.player.pos.0 + vec3(0.0, 0.5, 0.0);
             self.camera.up = up;
-            self.camera.target = self.player.pos.0 + front;
+            self.camera.target = self.camera.position + front;
         }
-        if is_key_down(KeyCode::Delete) {
-            println!(
-                "Enemy positions {:?} {:?}",
-                self.flying_enemies.positions[0].to_chunk(),
-                self.regular_enemies.positions[0].to_chunk()
-            );
-            let chunk = self.regular_enemies.positions[0].to_chunk();
-            println!(
-                "Entity at chunk {:?}",
-                self.world_layout[chunk.x as usize][chunk.y as usize][chunk.z as usize]
-            );
+        if is_key_down(KeyCode::V) {
+            exit(0);
         }
     }
 
@@ -278,7 +269,7 @@ impl World {
 pub struct DrawerImpl;
 impl Drawer for DrawerImpl {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color) {
-        macroquad::prelude::draw_cube_wires(position, size, color);
+        macroquad::prelude::draw_cube_wires(position+vec3(0.5, 0.5, 0.5), size, color); // offset by 0.5 so that visual matches actual grid
     }
     fn draw_rectangle(&self, position: Vec2, width: f32, height: f32, color: Color) {
         macroquad::prelude::draw_rectangle(position.x, position.y, width, height, color);

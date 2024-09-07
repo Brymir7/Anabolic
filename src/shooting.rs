@@ -5,7 +5,6 @@ pub fn shotgun_shoot(
     target_dir: Vec3,
     world_layout: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]
 ) {
-    println!("target dir {}", target_dir);
     let relative_chunk_dist_x = 1.0 / target_dir.x.abs();
     let relative_chunk_dist_y = 1.0 / target_dir.y.abs();
     let relative_chunk_dist_z = 1.0 / target_dir.z.abs();

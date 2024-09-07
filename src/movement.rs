@@ -50,8 +50,11 @@ impl MovementSystem {
                 pos.0 + Vec3::new(new_pos.0.x - pos.0.x, new_pos.0.y - pos.0.y, 0.0)
             );
         }
-        Self::update_world_position(chunk, EntityType::Player, &new_pos, &Vec3::splat(1.0));
+        new_pos.0 = new_pos.0.clamp(Vec3::splat(0.0), Vec3::splat(CHUNK_SIZE as f32 - 1.0));
         *pos = new_pos;
+
+        Self::update_world_position(chunk, EntityType::Player, &new_pos, &Vec3::splat(1.0));
+
     }
 
     pub fn update_ground_enemies(
@@ -117,6 +120,7 @@ impl MovementSystem {
                 pos.0.z = new_pos_z.0 - 0.5 * hitbox.z * vel.z.signum();
             }
             pos.0 = pos.0.clamp(Vec3::splat(0.0), Vec3::splat(CHUNK_SIZE as f32 - 1.0));
+            Self::update_world_position(chunk, EntityType::RegularEnemy(enemy_handle), &pos, &hitbox); 
         }
     }
 
@@ -145,7 +149,7 @@ impl MovementSystem {
         chunk: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]
     ) -> bool {
         match chunk[chunk_pos.x as usize][chunk_pos.y as usize][chunk_pos.z as usize] {
-            EntityType::RegularEnemy(h) => { handle == h }
+            EntityType::RegularEnemy(h) => {false}
             EntityType::None => { true }
             _ => { false }
         }
@@ -176,8 +180,8 @@ impl MovementSystem {
         pos: &ChunkVec3,
         hitbox: &Vec3
     ) {
-        let start = ChunkVec3(pos.0).to_chunk();
-        let end = ChunkVec3(pos.0 + *hitbox).to_chunk();
+        let start = ChunkVec3(pos.0 - *hitbox*0.5).to_chunk();
+        let end = ChunkVec3(pos.0 + *hitbox*0.5).to_chunk();
         for x in start.x..=end.x {
             for y in start.y..=end.y {
                 for z in start.z..=end.z {
