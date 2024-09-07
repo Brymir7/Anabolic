@@ -1,13 +1,15 @@
 use macroquad::math::Vec3;
 #[derive(Clone, Copy, Debug)]
 pub struct ChunkVec3(pub Vec3);
+#[derive(Clone, Copy, Debug)]
+pub struct ChunkVec1(pub f32);
+
 #[derive(Debug, Clone, Copy)]
 pub struct ChunkPos {
     pub x: u8,
-    pub z: u8,
     pub y: u8,
+    pub z: u8,
 }
-
 
 #[derive(Clone, Copy)]
 pub enum WeaponType {
@@ -94,4 +96,13 @@ pub struct SolidBlocks {
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub enum Textures {
     Weapon,
+}
+
+pub struct EnemyIdentifier {
+    pub flying: bool,
+    pub handle: EnemyHandle,
+}
+pub enum WorldEvent {
+    KillEnemy(EnemyIdentifier),
+    
 }

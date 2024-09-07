@@ -1,13 +1,9 @@
 use std::collections::VecDeque;
 
 use shared::{
-    config::CHUNK_SIZE,
-    types::{
+    config::CHUNK_SIZE, types::{
         ChunkPos, ChunkVec3, EnemyHandle, EntityType
-    },
-    Vec3,
-    BLUE,
-    RED, // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
+    }, vec3, Vec3, BLUE, RED // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
 };
 
 use crate::Screen;
@@ -26,6 +22,17 @@ pub fn render_enemy_world_positions(
     for (handle, &position) in regular_enemies.iter().enumerate() {
         render_enemy(screen, world_layout, position, EnemyHandle(handle as u16), false);
     }
+    // for x in 0..world_layout.len() {
+    //     for y in 0..world_layout.len() {
+    //         for z in 0..world_layout.len() {
+    //             if world_layout[x][y][z] != EntityType::None {
+    //                 if world_layout[x][y][z] != EntityType::SolidBlock {
+    //                 println!("XYZ {} {} {}", x, y, z);}
+    //                 screen.drawer.draw_cube_wires(vec3(x as f32,y as f32,z as f32), Vec3::splat(1.0), RED);
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 fn render_enemy(
@@ -40,6 +47,7 @@ fn render_enemy(
     let mut occupied_tiles = Vec::new();
 
     let start_pos = position.to_chunk();
+    if start_pos.x >= CHUNK_SIZE || start_pos.y >= CHUNK_SIZE || start_pos.z >= CHUNK_SIZE {return;}
     queue.push_back(start_pos);
     visited[start_pos.x as usize][start_pos.y as usize][start_pos.z as usize] = true;
     occupied_tiles.push(start_pos);

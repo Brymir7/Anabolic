@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{ collections::HashMap, ops::Sub };
 
 use macroquad::{ prelude::*, text };
 use movement::MovementSystem;
@@ -76,13 +76,12 @@ impl World {
         let mut world = World {
             player: Player::default(),
             camera: Camera3D {
-                position: INITIAL_PLAYER_POS + WORLD_UP,
+                position: INITIAL_PLAYER_POS,
                 up: WORLD_UP,
                 target: vec3(1.0, 1.8, 0.0),
                 ..Default::default()
             },
             grabbed: true,
-            //  X, Z, Y
             world_layout: [
                 [[EntityType::None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
                 CHUNK_SIZE as usize
@@ -91,17 +90,34 @@ impl World {
             regular_enemies: RegularEnemies::new(),
             solid_blocks: SolidBlocks::new(),
         };
+        world.world_layout[INITIAL_PLAYER_POS.x as usize][INITIAL_PLAYER_POS.y as usize][
+            INITIAL_PLAYER_POS.z as usize
+        ] = EntityType::Player;
         for x in 0..CHUNK_SIZE as usize {
             for z in 0..CHUNK_SIZE as usize {
-                world.world_layout[x][z][0] = EntityType::SolidBlock;
+                world.world_layout[x][0][z] = EntityType::SolidBlock;
                 world.solid_blocks.new_block(ChunkVec3(vec3(x as f32, 0.0, z as f32)));
             }
         }
-        world.world_layout[3][3][1] = EntityType::RegularEnemy(
+        world.world_layout[3][1][3] = EntityType::RegularEnemy(
             world.regular_enemies.new_enemy(
-                ChunkVec3(vec3(3.0, 1.0, 3.0)),
+                ChunkVec3(vec3(3.0, 3.0, 3.0)),
+                vec3(1.0, 0.0, 0.0),
+                shared::types::PossibleEnemySizes::MEDIUM
+            )
+        );
+        world.world_layout[5][1][3] = EntityType::RegularEnemy(
+            world.regular_enemies.new_enemy(
+                ChunkVec3(vec3(3.0, 3.0, 6.0)),
                 vec3(1.0, 0.0, 0.0),
                 shared::types::PossibleEnemySizes::SMALL
+            )
+        );
+        world.world_layout[7][1][3] = EntityType::RegularEnemy(
+            world.regular_enemies.new_enemy(
+                ChunkVec3(vec3(3.0, 3.0, 10.0)),
+                vec3(1.0, 0.0, 0.0),
+                shared::types::PossibleEnemySizes::LARGE
             )
         );
         world.world_layout[5][5][5] = EntityType::FlyingEnemy(
@@ -114,10 +130,11 @@ impl World {
         world
     }
     fn update(&mut self) {
+        let player_chunk = self.player.pos.to_chunk();
         MovementSystem::update_player(
             &mut self.player.pos,
             &mut self.player.vel,
-            &self.world_layout
+            &mut self.world_layout
         );
         MovementSystem::update_ground_enemies(
             &mut self.regular_enemies.positions,
@@ -125,11 +142,15 @@ impl World {
             &self.regular_enemies.size,
             &mut self.world_layout
         );
-        MovementSystem::update_flying_enemies(
-            &mut self.flying_enemies.positions,
-            &mut self.flying_enemies.velocities,
-            &self.flying_enemies.size,
-            &mut self.world_layout
+        // MovementSystem::update_flying_enemies(
+        //     &mut self.flying_enemies.positions,
+        //     &mut self.flying_enemies.velocities,
+        //     &self.flying_enemies.size,
+        //     &mut self.world_layout
+        // );
+        assert!(
+            self.world_layout[player_chunk.x as usize][player_chunk.y as usize]
+                [player_chunk.z as usize] == EntityType::Player
         );
     }
 
@@ -148,44 +169,55 @@ impl World {
                 self.player.pitch.sin(),
                 self.player.yaw.sin() * self.player.pitch.cos()
             ).normalize();
-            shotgun_shoot(self.player.pos + vec3(0.0, 1.0, 0.0), front, &self.world_layout);
+            shotgun_shoot(self.player.pos, front, &self.world_layout);
         }
         let delta = get_frame_time();
         if self.grabbed {
             let mouse_delta = mouse_delta_position();
-            if self.grabbed {
-                self.player.yaw -= mouse_delta.x * delta * LOOK_SPEED;
-                self.player.pitch -= mouse_delta.y * delta * -LOOK_SPEED;
-                self.player.pitch = self.player.pitch.clamp(-1.5, 1.5);
-                let front = vec3(
-                    self.player.yaw.cos() * self.player.pitch.cos(),
-                    self.player.pitch.sin(),
-                    self.player.yaw.sin() * self.player.pitch.cos()
-                ).normalize();
 
-                let right = front.cross(WORLD_UP).normalize();
-                let up = right.cross(front).normalize();
-                let mut player_vel = Vec3::ZERO;
-                if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) {
-                    player_vel = vec3_no_y(front);
-                }
-                if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) {
-                    player_vel = -vec3_no_y(front);
-                }
-                if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) {
-                    player_vel = -vec3_no_y(right);
-                }
-                if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) {
-                    player_vel = vec3_no_y(right);
-                }
-                if is_key_down(KeyCode::Space) {
-                    player_vel.y = JUMP_STRENGTH;
-                }
-                self.player.vel = player_vel;
-                self.camera.position = self.player.pos.0;
-                self.camera.up = up;
-                self.camera.target = self.player.pos.0 + front;
+            self.player.yaw -= mouse_delta.x * delta * LOOK_SPEED;
+            self.player.pitch -= mouse_delta.y * delta * -LOOK_SPEED;
+            self.player.pitch = self.player.pitch.clamp(-1.5, 1.5);
+            let front = vec3(
+                self.player.yaw.cos() * self.player.pitch.cos(),
+                self.player.pitch.sin(),
+                self.player.yaw.sin() * self.player.pitch.cos()
+            ).normalize();
+
+            let right = front.cross(WORLD_UP).normalize();
+            let up = right.cross(front).normalize();
+            let mut player_vel = Vec3::ZERO;
+            if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) {
+                player_vel = vec3_no_y(front);
             }
+            if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) {
+                player_vel = -vec3_no_y(front);
+            }
+            if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) {
+                player_vel = -vec3_no_y(right);
+            }
+            if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) {
+                player_vel = vec3_no_y(right);
+            }
+            if is_key_down(KeyCode::Space) {
+                player_vel.y = JUMP_STRENGTH;
+            }
+            self.player.vel = player_vel;
+            self.camera.position = self.player.pos.0;
+            self.camera.up = up;
+            self.camera.target = self.player.pos.0 + front;
+        }
+        if is_key_down(KeyCode::Delete) {
+            println!(
+                "Enemy positions {:?} {:?}",
+                self.flying_enemies.positions[0].to_chunk(),
+                self.regular_enemies.positions[0].to_chunk()
+            );
+            let chunk = self.regular_enemies.positions[0].to_chunk();
+            println!(
+                "Entity at chunk {:?}",
+                self.world_layout[chunk.x as usize][chunk.y as usize][chunk.z as usize]
+            );
         }
     }
 
@@ -220,8 +252,8 @@ impl World {
             screen,
             &self.flying_enemies.positions,
             &self.flying_enemies.velocities,
-            &self.regular_enemies.animation_state,
-            &self.regular_enemies.size
+            &self.flying_enemies.animation_state,
+            &self.flying_enemies.size
         );
         hot_r_renderer::render_enemy_world_positions(
             screen,

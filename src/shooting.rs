@@ -1,4 +1,4 @@
-use shared::{config::CHUNK_SIZE, types::{ChunkVec3, EntityType}, Vec3};
+use shared::{ config::CHUNK_SIZE, types::{ ChunkVec3, EntityType }, Vec3 };
 
 pub fn shotgun_shoot(
     origin: ChunkVec3,
@@ -41,29 +41,44 @@ pub fn shotgun_shoot(
         curr_map_tile_z < CHUNK_SIZE
     {
         // Check for collision with an entity
-        let entity = world_layout[curr_map_tile_x as usize][curr_map_tile_y as usize][curr_map_tile_z as usize];
-        if entity != EntityType::None && entity != EntityType::SolidBlock {
-            // Handle collision (e.g., deal damage, destroy entity)
-            println!("Hit entity {:?} at ({}, {}, {})", entity, curr_map_tile_x, curr_map_tile_y, curr_map_tile_z);
+        let entity =
+            world_layout[curr_map_tile_x as usize][curr_map_tile_y as usize]
+                [curr_map_tile_z as usize];
+        if
+            entity != EntityType::None &&
+            entity != EntityType::SolidBlock &&
+            entity != EntityType::Player
+        {
+            println!(
+                "Hit entity {:?} at ({}, {}, {})",
+                entity,
+                curr_map_tile_x,
+                curr_map_tile_y,
+                curr_map_tile_z
+            );
             break;
         }
 
-        // Determine which plane to cross next (xy, xz, or yz)
+
         if dist_side_x < dist_side_y && dist_side_x < dist_side_z {
             // Cross the YZ plane
-            curr_map_tile_x = (curr_map_tile_x as isize + step_x) as u8;
+            curr_map_tile_x = ((curr_map_tile_x as isize) + step_x) as u8;
             dist_side_x += relative_chunk_dist_x;
         } else if dist_side_y < dist_side_z {
             // Cross the XZ plane
-            curr_map_tile_y = (curr_map_tile_y as isize + step_y) as u8;
+            curr_map_tile_y = ((curr_map_tile_y as isize) + step_y) as u8;
             dist_side_y += relative_chunk_dist_y;
         } else {
             // Cross the XY plane
-            curr_map_tile_z = (curr_map_tile_z as isize + step_z) as u8;
+            curr_map_tile_z = ((curr_map_tile_z as isize) + step_z) as u8;
             dist_side_z += relative_chunk_dist_z;
         }
     }
 
-    // If we've exited the loop without hitting anything, the shot has left the chunk
-    println!("Shot exited the chunk at ({}, {}, {})", curr_map_tile_x, curr_map_tile_y, curr_map_tile_z);
+    println!(
+        "Shot exited the chunk at ({}, {}, {})",
+        curr_map_tile_x,
+        curr_map_tile_y,
+        curr_map_tile_z
+    );
 }

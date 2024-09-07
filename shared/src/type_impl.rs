@@ -5,7 +5,7 @@ use macroquad::math::Vec3;
 use crate::{
     config::INITIAL_PLAYER_POS,
     types::{
-        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec3, CurrWeapon, EnemyHandle, FlyingEnemies, MaxWeapon, Player, PossibleEnemySizes, RegularEnemies, SolidBlocks, Weapon, WeaponType
+        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec1, ChunkVec3, CurrWeapon, EnemyHandle, FlyingEnemies, MaxWeapon, Player, PossibleEnemySizes, RegularEnemies, SolidBlocks, Weapon, WeaponType
     },
 };
 
@@ -154,11 +154,11 @@ impl Player {
 }
 
 impl ChunkPos {
-    pub fn new(x: u8, z: u8, y: u8) -> Self {
+    pub fn new(x: u8, y: u8, z: u8) -> Self {
         ChunkPos {
             x,
-            z,
             y,
+            z,
         }
     }
 }
@@ -168,6 +168,13 @@ impl ChunkVec3 {
         assert!(data.x.round() < 255.0 && data.x >= 0.0);
         assert!(data.y.round() < 255.0 && data.y >= 0.0);
         assert!(data.z.round() < 255.0 && data.z >= 0.0);
-        return ChunkPos::new(data.x.round() as u8, data.z.round() as u8, data.y.round() as u8);
+        return ChunkPos::new(data.x.round() as u8, data.y.round() as u8, data.z.round() as u8);
+    }
+}
+impl ChunkVec1 {
+    pub fn to_chunk_axis_idx(&self) -> u8 {
+        let data = self.0;
+        assert!(data.round() < 255.0 && data >= 0.0);
+        return data.round() as u8;
     }
 }

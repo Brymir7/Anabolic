@@ -101,6 +101,7 @@ pub fn render_flying_enemies(
             animations[i].max_step
         );
         #[cfg(feature = "debug")]
+
         render_flying_enemy_with_hitbox(
             screen,
             *enemy,
