@@ -158,6 +158,9 @@ impl ChunkPos {
             z,
         }
     }
+    pub fn as_vec3(&self) -> Vec3{
+        return vec3(self.x as f32, self.y as f32, self.z as f32);
+    }
 }
 impl ChunkVec3 {
     pub fn to_chunk(&self) -> ChunkPos {

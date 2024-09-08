@@ -1,15 +1,6 @@
 use shared::{
     config::CHUNK_SIZE,
-    types::{
-        ChunkVec3,
-        Enemies,
-
-        EntityType,
-       Player,
-
-        WeaponType,
-        WorldEvent,
-    },
+    types::{ ChunkVec3, Enemies, EntityType, Player, WeaponType, WorldEvent },
     vec3,
     Vec3,
 };
@@ -51,7 +42,8 @@ pub fn shotgun_shoot(
     let step_x: isize = if target_dir.x > 0.0 { 1 } else { -1 };
     let step_y: isize = if target_dir.y > 0.0 { 1 } else { -1 };
     let step_z: isize = if target_dir.z > 0.0 { 1 } else { -1 };
-
+    const ROUNDING_OFFSET: Vec3 = vec3(0.5, 0.5, 0.5);
+    let origin = origin + ROUNDING_OFFSET;
     let curr_chunk = origin.to_chunk();
     let mut curr_map_tile_x = curr_chunk.x;
     let mut curr_map_tile_y = curr_chunk.y;
@@ -83,32 +75,39 @@ pub fn shotgun_shoot(
         let entities =
             &world_layout[curr_map_tile_x as usize][curr_map_tile_y as usize]
                 [curr_map_tile_z as usize];
+
         for entity in entities {
             match entity {
                 EntityType::Enemy(h) => {
                     let position = enemies.positions[h.0 as usize];
-                    let hitbox = Enemies::get_hitbox_from_size(
-                        enemies.size[h.0 as usize]
-                    );
+                    let hitbox = Enemies::get_hitbox_from_size(enemies.size[h.0 as usize]);
                     let box_min = position + -hitbox / 2.0;
-                    let box_max = position + hitbox / 2.0; 
+                    let box_max = position + hitbox / 2.0;
 
-                    if let Some(t) = ray_box_intersection(origin.0, target_dir, box_min.0, box_max.0) {
-                        let event = WorldEvent::HitEnemy(
-                            *h
-                        );
-                        println!("HIT ENEMY");
+                    if
+                        let Some(t) = ray_box_intersection(
+                            origin.0 - ROUNDING_OFFSET,
+                            target_dir,
+                            box_min.0,
+                            box_max.0
+                        )
+                    {
+                        let event = WorldEvent::HitEnemy(*h);
                         closest_intersection = Some(
                             closest_intersection
                                 .map(|(dist, _)| if t < dist { (t, event) } else { (dist, event) })
                                 .unwrap_or((t, event))
                         );
+                    } else {
+                        println!("Missed");
                     }
                 }
                 _ => {}
             }
         }
-        if closest_intersection.is_some() {break;}
+        if closest_intersection.is_some() {
+            break;
+        }
         if dist_side_x < dist_side_y && dist_side_x < dist_side_z {
             // Cross the YZ plane
             curr_map_tile_x = ((curr_map_tile_x as isize) + step_x) as u8;
@@ -144,7 +143,7 @@ pub fn shoot(
             ).normalize();
             // make player a bit higher, so that when he looks down on smaller opponents he can hit them at their feet
             let event = shotgun_shoot(
-                player.pos + vec3(0.0, 0.0, 0.0),
+                player.pos,
                 front,
                 enemies,
                 world_layout

@@ -258,6 +258,15 @@ impl World {
         if is_key_down(KeyCode::V) {
             exit(0);
         }
+        if is_key_down(KeyCode::R) {
+            self.world_layout = World::default().world_layout;
+            self.enemies = World::default().enemies;
+        }
+        
+        if is_key_down(KeyCode::F) {
+            println!("player pos as chunk {:?}, non chunk {:?}", self.player.pos.to_chunk(), self.player.pos);
+            println!("Enemies {:?}", self.enemies.positions.iter().map(|f| f.to_chunk()));
+        }
     }
 
     #[cfg(not(feature = "hot-reload"))]
@@ -313,7 +322,7 @@ impl World {
 pub struct DrawerImpl;
 impl Drawer for DrawerImpl {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color) {
-        macroquad::prelude::draw_cube_wires(position + vec3(0.0, 0.0, 0.0), size, color); // offset by 0.5 so that visual matches actual grid
+        macroquad::prelude::draw_cube_wires(position, size, color);
     }
     fn draw_rectangle(&self, position: Vec2, width: f32, height: f32, color: Color) {
         macroquad::prelude::draw_rectangle(position.x, position.y, width, height, color);
