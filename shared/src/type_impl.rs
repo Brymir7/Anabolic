@@ -5,18 +5,19 @@ use macroquad::math::{vec3, Vec3};
 use crate::{
     config::{CHUNK_SIZE, INITIAL_PLAYER_POS},
     types::{
-        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec1, ChunkVec3, CurrWeapon, EnemyHandle, EnemyIdentifier, FlyingEnemies, MaxWeapon, Player, PossibleEnemySizes, RegularEnemies, SolidBlocks, Weapon, WeaponType, WorldEvent
+        AnimationCallbackEvent, AnimationState, ChunkPos,  ChunkVec3, CurrWeapon, Enemies, EnemyHandle, EnemyType, MaxWeapon, Player, PossibleEnemySizes, SolidBlocks, Weapon, WeaponType, WorldEvent
     },
 };
 
-impl RegularEnemies {
+impl Enemies {
     pub fn new() -> Self {
-        RegularEnemies {
+        Enemies {
             positions: Vec::new(),
             velocities: Vec::new(),
             animation_state: Vec::new(),
             size: Vec::new(),
             healths: Vec::new(),
+            e_type: Vec::new(),
         }
     }
     pub fn new_enemy(
@@ -25,12 +26,14 @@ impl RegularEnemies {
         vel: Vec3,
         size: PossibleEnemySizes,
         health: u8,
+        e_type: EnemyType,
     ) -> EnemyHandle {
         self.positions.push(pos);
         self.velocities.push(vel);
         self.animation_state.push(AnimationState::default());
         self.size.push(size);
         self.healths.push(health);
+        self.e_type.push(e_type);
         return EnemyHandle((self.positions.len() - 1) as u16);
     }
     pub fn get_vec3_size(size: PossibleEnemySizes) -> Vec3 {
@@ -75,72 +78,7 @@ impl RegularEnemies {
         res
     } 
 }
-impl FlyingEnemies {
-    pub fn new() -> Self {
-        FlyingEnemies {
-            positions: Vec::new(),
-            velocities: Vec::new(),
-            animation_state: Vec::new(),
-            size: Vec::new(),
-            healths: Vec::new(),
-        }
-    }
-    pub fn new_enemy(
-        &mut self,
-        pos: ChunkVec3,
-        vel: Vec3,
-        size: PossibleEnemySizes,
-        health: u8,
-    ) -> EnemyHandle {
-        self.positions.push(pos);
-        self.velocities.push(vel);
-        self.animation_state.push(AnimationState::default());
-        self.size.push(size);
-        self.healths.push(health);
-        return EnemyHandle((self.positions.len() - 1) as u16);
-    }
-    pub fn get_vec3_size(size: PossibleEnemySizes) -> Vec3 {
-        match size {
-            PossibleEnemySizes::SMALL => Vec3::splat(0.25),
-            PossibleEnemySizes::MEDIUM => Vec3::splat(0.5),
-            PossibleEnemySizes::LARGE => Vec3::splat(0.75),
-            PossibleEnemySizes::BOSS => Vec3::splat(1.25),
-        }
-    }
-    pub fn remove_enemy(&mut self, h: EnemyHandle) {
-        let index = h.0 as usize;
-        if index < self.positions.len() {
-            self.positions.swap_remove(index);
-            self.velocities.swap_remove(index);
-            self.animation_state.swap_remove(index);
-            self.size.swap_remove(index);
-            self.healths.swap_remove(index);
-        }
-    }
-    pub fn get_hitbox_from_size(size: PossibleEnemySizes) -> Vec3 {
-        match size {
-            PossibleEnemySizes::SMALL => Vec3::splat(0.25) * 2.0,
-            PossibleEnemySizes::MEDIUM => Vec3::splat(0.5) * 2.0,
-            PossibleEnemySizes::LARGE => Vec3::splat(0.75) * 2.0,
-            PossibleEnemySizes::BOSS => Vec3::splat(1.25) * 2.0,
-        }
-    }
-    pub fn get_occupied_tiles(pos: &ChunkVec3, hitbox: &Vec3) -> Vec<ChunkPos> {
-        let mut res =Vec::new();
-        let start = ChunkVec3(pos.0 - *hitbox*0.5).to_chunk();
-        let end = ChunkVec3(pos.0 + *hitbox*0.5).to_chunk();
-        for x in start.x..=end.x {
-            for y in start.y..=end.y {
-                for z in start.z..=end.z {
-                    if x < CHUNK_SIZE && y < CHUNK_SIZE && z < CHUNK_SIZE {
-                        res.push(ChunkPos::new(x, y, z));
-                    }
-                }
-            }
-        }
-        res
-    } 
-}
+
 impl SolidBlocks {
     pub fn new() -> Self {
         SolidBlocks {
@@ -229,27 +167,4 @@ impl ChunkVec3 {
         return ChunkPos::new(data.x.round() as u8, data.y.round() as u8, data.z.round() as u8);
     }
 }
-impl ChunkVec1 {
-    pub fn to_chunk_axis_idx(&self) -> u8 {
-        let data = self.0;
-        let data = data.clamp(0.0, CHUNK_SIZE as f32 - 0.51); // small enough to not get rounded to chunk size
-        assert!(data.round() < 255.0 && data >= 0.0);
-        return data.round() as u8;
-    }
-}
 
-
-impl EnemyIdentifier {
-    pub fn flying_enemy_identifier(h: EnemyHandle) -> Self {
-        EnemyIdentifier {
-            flying: true,
-            handle: h,
-        }
-    }
-    pub fn regular_enemy_identifier(h: EnemyHandle) -> Self {
-        EnemyIdentifier {
-            flying: false,
-            handle: h,
-        }
-    }
-}

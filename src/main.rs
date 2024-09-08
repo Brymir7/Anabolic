@@ -1,5 +1,5 @@
 use std::{ collections::{ HashMap, VecDeque }, fs::DirEntry, process::exit, time::Duration };
-use shared::{ config::window_conf, types::{ ChunkPos, EnemyHandle } };
+use shared::{ config::window_conf, types::{ ChunkPos, Enemies, EnemyHandle } };
 use macroquad::prelude::*;
 use movement::MovementSystem;
 use shared::{
@@ -11,16 +11,7 @@ use shared::{
         PHYSICS_FRAME_TIME,
         WORLD_UP,
     },
-    types::{
-        ChunkVec3,
-        EntityType,
-        FlyingEnemies,
-        Player,
-        RegularEnemies,
-        SolidBlocks,
-        Textures,
-        WorldEvent,
-    },
+    types::{ ChunkVec3, EntityType, Player, SolidBlocks, Textures, WorldEvent },
     Lazy,
 };
 use shooting::shoot;
@@ -64,11 +55,10 @@ mod hot_r_renderer {
 pub struct World {
     player: Player,
     camera: Camera3D,
-    regular_enemies: RegularEnemies,
-    flying_enemies: FlyingEnemies,
+    enemies: Enemies,
     solid_blocks: SolidBlocks,
     pub world_layout: [
-        [[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+        [[Vec<EntityType>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         CHUNK_SIZE as usize
     ],
     grabbed: bool,
@@ -77,6 +67,12 @@ pub struct World {
 
 impl World {
     fn default() -> Self {
+        let world_layout: [
+            [[Vec<EntityType>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+            CHUNK_SIZE as usize
+        ] = core::array::from_fn(|_| {
+            core::array::from_fn(|_| { core::array::from_fn(|_| { Vec::new() }) })
+        });
         let mut world = World {
             player: Player::default(),
             camera: Camera3D {
@@ -86,58 +82,61 @@ impl World {
                 ..Default::default()
             },
             grabbed: true,
-            world_layout: [
-                [[EntityType::None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
-                CHUNK_SIZE as usize
-            ],
-            flying_enemies: FlyingEnemies::new(),
-            regular_enemies: RegularEnemies::new(),
+            world_layout: world_layout,
+            enemies: Enemies::new(),
             solid_blocks: SolidBlocks::new(), // make static
             world_event_queue: VecDeque::new(),
         };
         world.world_layout[INITIAL_PLAYER_POS.x as usize][INITIAL_PLAYER_POS.y as usize][
             INITIAL_PLAYER_POS.z as usize
-        ] = EntityType::Player;
+        ].push(EntityType::Player);
+
         for x in 0..CHUNK_SIZE as usize {
             for z in 0..CHUNK_SIZE as usize {
-                world.world_layout[x][0][z] = EntityType::SolidBlock;
+                world.world_layout[x][0][z].push(EntityType::SolidBlock);
                 world.solid_blocks.new_block(ChunkVec3(vec3(x as f32, 0.0, z as f32)));
             }
         }
+        world.world_layout[3][1][3].push(EntityType::Enemy(
+            world.enemies.new_enemy(
+                ChunkVec3(vec3(3.0, 1.0, 3.0)),
+                vec3(1.0, 0.0, 0.0),
+                shared::types::PossibleEnemySizes::SMALL,
+                1,
+                shared::types::EnemyType::Regular,
+            )
+        ));
+        world.world_layout[12][1][3].push(EntityType::Enemy(
+            world.enemies.new_enemy(
+                ChunkVec3(vec3(12.0, 1.0, 3.0)),
+                vec3(-1.0, 0.0, 0.0),
+                shared::types::PossibleEnemySizes::SMALL,
+                1,
+                shared::types::EnemyType::Regular,
+            )
+        ));
         world
-    }
-    fn remove_flying_enemy(&mut self, h: EnemyHandle) {
-        println!("KILLING ENEMY {:?}", h);
-        let index = h.0 as usize;
-        if index < self.flying_enemies.positions.len() {
-            let position = self.flying_enemies.positions[index];
-            let size = self.flying_enemies.size[index];
-            let hitbox = FlyingEnemies::get_hitbox_from_size(size);
-
-            let occupied_tiles = FlyingEnemies::get_occupied_tiles(&position, &hitbox);
-            for tile in occupied_tiles {
-                self.world_layout[tile.x as usize][tile.y as usize][tile.z as usize] =
-                    EntityType::None;
-            }
-
-            self.flying_enemies.remove_enemy(h);
-        }
     }
 
     fn remove_regular_enemy(&mut self, h: EnemyHandle) {
         let index = h.0 as usize;
-        if index < self.regular_enemies.positions.len() {
-            let position = self.regular_enemies.positions[index];
-            let size = self.regular_enemies.size[index];
-            let hitbox = RegularEnemies::get_hitbox_from_size(size);
+        if index < self.enemies.positions.len() {
+            let position = self.enemies.positions[index];
+            let size = self.enemies.size[index];
+            let hitbox = Enemies::get_hitbox_from_size(size);
 
-            let occupied_tiles = RegularEnemies::get_occupied_tiles(&position, &hitbox);
+            let occupied_tiles = Enemies::get_occupied_tiles(&position, &hitbox);
             for tile in occupied_tiles {
-                self.world_layout[tile.x as usize][tile.y as usize][tile.z as usize] =
-                    EntityType::None;
+                self.world_layout[tile.x as usize][tile.y as usize][tile.z as usize].retain(
+                    |entity| {
+                        match entity {
+                            EntityType::Enemy(h) => { h != h }
+                            _ => { true }
+                        }
+                    }
+                );
             }
-
-            self.regular_enemies.remove_enemy(h);
+            self.enemies.remove_enemy(h);
         }
     }
 
@@ -145,36 +144,16 @@ impl World {
         while let Some(event) = self.world_event_queue.pop_front() {
             println!("event {:?}", event);
             match event {
-                WorldEvent::KillEnemy(identifier) => {
-                    if identifier.flying {
-                        self.remove_flying_enemy(identifier.handle);
-                    } else {
-                        self.remove_regular_enemy(identifier.handle);
-                    }
+                WorldEvent::KillEnemy(h) => {
+                    self.remove_regular_enemy(h);
                 }
-                WorldEvent::HitEnemy(identifier) => {
-                    if identifier.flying {
-                        let enemies = &mut self.flying_enemies;
-                        let index = identifier.handle.0 as usize;
-                        if index < enemies.healths.len() {
-                            if enemies.healths[index] > 1 {
-                                enemies.healths[index] -= 1;
-                            } else {
-                                self.world_event_queue.push_back(WorldEvent::KillEnemy(identifier));
-                            }
-                        }
-                    } else {
-                        let enemies = &mut self.regular_enemies;
-                        let index = identifier.handle.0 as usize;
-                        println!("Index, {}", index);
-                        println!("enemy h {}", enemies.healths[index]);
-                        if index < enemies.healths.len() {
-                            if enemies.healths[index] > 1 {
-                                enemies.healths[index] -= 1;
-
-                            } else {
-                                self.world_event_queue.push_back(WorldEvent::KillEnemy(identifier));
-                            }
+                WorldEvent::HitEnemy(h) => {
+                    let index = h.0 as usize;
+                    if index < self.enemies.healths.len() {
+                        if self.enemies.healths[index] > 1 {
+                            self.enemies.healths[index] -= 1;
+                        } else {
+                            self.world_event_queue.push_back(WorldEvent::KillEnemy(h));
                         }
                     }
                 }
@@ -187,25 +166,19 @@ impl World {
         MovementSystem::update_player(
             &mut self.player.pos,
             &mut self.player.vel,
+            &self.enemies,
             &mut self.world_layout
         );
-        MovementSystem::update_ground_enemies(
+        MovementSystem::update_enemies(
             &self.player.pos,
-            &mut self.regular_enemies.positions,
-            &mut self.regular_enemies.velocities,
-            &self.regular_enemies.size,
+            &mut self.enemies,
             &mut self.world_layout
         );
-        // MovementSystem::update_flying_enemies(
-        //     &mut self.flying_enemies.positions,
-        //     &mut self.flying_enemies.velocities,
-        //     &self.flying_enemies.size,
-        //     &mut self.world_layout
-        // );
-        update_spawning_system(self, spawner, Duration::from_secs_f32(PHYSICS_FRAME_TIME));
+        // update_spawning_system(self, spawner, Duration::from_secs_f32(PHYSICS_FRAME_TIME));
         assert!(
-            self.world_layout[player_chunk.x as usize][player_chunk.y as usize]
-                [player_chunk.z as usize] == EntityType::Player
+            self.world_layout[player_chunk.x as usize][player_chunk.y as usize][
+                player_chunk.z as usize
+            ].contains(&EntityType::Player)
         );
     }
 
@@ -219,7 +192,9 @@ impl World {
             self.grabbed = true;
             set_cursor_grab(self.grabbed);
             show_mouse(!self.grabbed);
-            self.world_event_queue.extend(shoot(&mut self.player, &self.world_layout));
+            self.world_event_queue.extend(
+                shoot(&mut self.player, &self.enemies, &self.world_layout)
+            );
         }
         if is_key_pressed(KeyCode::E) {
             self.player.swap_next_weapon();
@@ -280,32 +255,29 @@ impl World {
         // needs to be mutable because of animation states, maybe refactor into a world separate struct?
         set_camera(&self.camera);
 
-        hot_r_renderer::update_animations(
-            &mut self.regular_enemies.animation_state,
-            get_frame_time()
-        );
+        hot_r_renderer::update_animations(&mut self.enemies.animation_state, get_frame_time());
         hot_r_renderer::update_animation(&mut self.player.animation_state, get_frame_time());
         hot_r_renderer::render_solid_blocks(screen, &self.solid_blocks.positions);
         hot_r_renderer::render_regular_enemies(
             screen,
-            &self.regular_enemies.positions,
-            &self.regular_enemies.velocities,
-            &self.regular_enemies.animation_state,
-            &self.regular_enemies.size
+            &self.enemies.positions,
+            &self.enemies.velocities,
+            &self.enemies.animation_state,
+            &self.enemies.size
         );
-        hot_r_renderer::render_flying_enemies(
-            screen,
-            &self.flying_enemies.positions,
-            &self.flying_enemies.velocities,
-            &self.flying_enemies.animation_state,
-            &self.flying_enemies.size
-        );
-        hot_r_renderer::render_enemy_world_positions(
-            screen,
-            &self.world_layout,
-            &self.flying_enemies.positions,
-            &self.regular_enemies.positions
-        );
+        // hot_r_renderer::render_flying_enemies(
+        //     screen,
+        //     &self.flying_enemies.positions,
+        //     &self.flying_enemies.velocities,
+        //     &self.flying_enemies.animation_state,
+        //     &self.flying_enemies.size
+        // );
+        // hot_r_renderer::render_enemy_world_positions(
+        //     screen,
+        //     &self.world_layout,
+        //     &self.flying_enemies.positions,
+        //     &self.regular_enemies.positions
+        // );
         set_default_camera();
         let weapon_texture = TEXTURE_TYPE_TO_TEXTURE2D.get(&Textures::Weapon).expect(
             "Failed to load weapon"

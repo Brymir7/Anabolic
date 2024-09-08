@@ -6,13 +6,7 @@ use std::{
 use shared::{
     config::{ SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE },
     types::{
-        AnimationState,
-        ChunkVec3,
-        FlyingEnemies,
-        PossibleEnemySizes,
-        RegularEnemies,
-        Textures,
-        WeaponType,
+        AnimationState, ChunkVec3, Enemies, PossibleEnemySizes, Textures, WeaponType
     },
     vec2,
     vec3,
@@ -28,7 +22,7 @@ use shared::{
     YELLOW, // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
 };
 pub mod animation;
-pub mod debug;
+
 pub trait Drawer {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color);
     fn draw_rectangle(&self, position: Vec2, width: f32, height: f32, color: Color);
@@ -204,14 +198,14 @@ pub fn render_default_enemy_with_hitbox(
     animation_step: f32,
     max_animation_step: f32
 ) {
-    let scale = RegularEnemies::get_vec3_size(size);
+    let scale = Enemies::get_vec3_size(size);
     let is_x_dominant = vel.x.abs() < vel.z.abs();
     let x_multiplier = is_x_dominant as u8;
     let z_multiplier = !is_x_dominant as u8;
 
     let pos = pos.0;
     // HITBOX
-    screen.drawer.draw_cube_wires(pos, RegularEnemies::get_hitbox_from_size(size), GRAY);
+    screen.drawer.draw_cube_wires(pos, Enemies::get_hitbox_from_size(size), GRAY);
     // HEAD
     screen.drawer.draw_cube_wires(
         pos + vec3(0.0, 0.75, 0.0) * scale,
@@ -274,7 +268,7 @@ pub fn render_flying_enemy(
     animation_step: f32,
     max_animation_step: f32
 ) {
-    let scale = FlyingEnemies::get_vec3_size(size);
+    let scale = Enemies::get_vec3_size(size);
     let pos = pos.0;
     let size_animation = (animation_step * PI).sin() * 0.5;
     // BODY
@@ -291,11 +285,11 @@ pub fn render_flying_enemy_with_hitbox(
     animation_step: f32,
     max_animation_step: f32
 ) {
-    let scale = FlyingEnemies::get_vec3_size(size);
+    let scale = Enemies::get_vec3_size(size);
     let pos = pos.0;
     let size_animation = ((animation_step * PI).sin() * 2.0).max(0.5);
     // HITBOX
-    screen.drawer.draw_cube_wires(pos, RegularEnemies::get_hitbox_from_size(size), GRAY);
+    screen.drawer.draw_cube_wires(pos, Enemies::get_hitbox_from_size(size), GRAY);
 
     screen.drawer.draw_cube_wires(pos, Vec3::splat(1.0) * scale * size_animation, RED);
     screen.drawer.draw_cube_wires(pos, Vec3::splat(0.5) * scale * size_animation, YELLOW);

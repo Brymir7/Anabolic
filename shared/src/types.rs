@@ -1,8 +1,6 @@
 use macroquad::math::Vec3;
 #[derive(Clone, Copy, Debug)]
 pub struct ChunkVec3(pub Vec3);
-#[derive(Clone, Copy, Debug)]
-pub struct ChunkVec1(pub f32);
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChunkPos {
@@ -40,14 +38,13 @@ pub struct Player {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EnemyHandle(pub u16);
 
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EntityType {
     SolidBlock,
     Player,
-    None,
     InteractableBlock(u16),
-    RegularEnemy(EnemyHandle),
-    FlyingEnemy(EnemyHandle),
+    Enemy(EnemyHandle),
 }
 enum InteractableBlockType {
     Portal,
@@ -76,19 +73,18 @@ pub enum PossibleEnemySizes {
     LARGE,
     BOSS,
 } 
-pub struct FlyingEnemies {
-    pub positions: Vec<ChunkVec3>,
-    pub velocities: Vec<Vec3>,
-    pub animation_state: Vec<AnimationState>,
-    pub size: Vec<PossibleEnemySizes>,
-    pub healths: Vec<u8>,
+pub enum EnemyType {
+    Flying,
+    Regular,
+    Cube,
 }
-pub struct RegularEnemies {
+pub struct Enemies {
     pub positions: Vec<ChunkVec3>,
     pub velocities: Vec<Vec3>,
     pub animation_state: Vec<AnimationState>,
     pub size: Vec<PossibleEnemySizes>,
     pub healths: Vec<u8>,
+    pub e_type: Vec<EnemyType>
 }
 
 pub struct SolidBlocks {
@@ -99,13 +95,10 @@ pub struct SolidBlocks {
 pub enum Textures {
     Weapon,
 }
-#[derive(Debug)]
-pub struct EnemyIdentifier {
-    pub flying: bool,
-    pub handle: EnemyHandle,
-}
-#[derive(Debug)]
+
+
+#[derive(Debug, Clone, Copy)]
 pub enum WorldEvent {
-    KillEnemy(EnemyIdentifier),
-    HitEnemy(EnemyIdentifier),
+    KillEnemy(EnemyHandle),
+    HitEnemy(EnemyHandle),
 }

@@ -1,9 +1,12 @@
 use std::collections::VecDeque;
 
 use shared::{
-    config::CHUNK_SIZE, types::{
-        ChunkPos, ChunkVec3, EnemyHandle, EntityType
-    }, vec3, Vec3, BLUE, RED // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
+    config::CHUNK_SIZE,
+    types::{ ChunkPos, ChunkVec3, EnemyHandleType, EntityType, FlyingEnemyHandle, RegularEnemyHandle },
+    vec3,
+    Vec3,
+    BLUE,
+    RED, // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
 };
 
 use crate::Screen;
@@ -11,16 +14,19 @@ use crate::Screen;
 #[no_mangle]
 pub fn render_enemy_world_positions(
     screen: &Screen,
-    world_layout: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    world_layout: &[
+        [[Vec<EntityType>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+        CHUNK_SIZE as usize
+    ],
     flying_enemies: &[ChunkVec3],
-    regular_enemies: &[ChunkVec3],
+    regular_enemies: &[ChunkVec3]
 ) {
     for (handle, &position) in flying_enemies.iter().enumerate() {
-       render_enemy(screen, world_layout, position, EnemyHandle(handle as u16), true);
+        render_enemy(screen, world_layout, position, EnemyHandleType::Flying(FlyingEnemyHandle(handle as u16)), true);
     }
 
     for (handle, &position) in regular_enemies.iter().enumerate() {
-        render_enemy(screen, world_layout, position, EnemyHandle(handle as u16), false);
+        render_enemy(screen, world_layout, position, EnemyHandleType::Regular(RegularEnemyHandle(handle as u16)), false);
     }
     // for x in 0..world_layout.len() {
     //     for y in 0..world_layout.len() {
@@ -36,27 +42,33 @@ pub fn render_enemy_world_positions(
 }
 
 fn render_enemy(
-    screen: & Screen,
-    world_layout: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    screen: &Screen,
+    world_layout: &[
+        [[Vec<EntityType>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+        CHUNK_SIZE as usize
+    ],
     position: ChunkVec3,
-    handle: EnemyHandle,
-    is_flying: bool,
+    handle: EnemyHandleType,
+    is_flying: bool
 ) {
     let mut visited = [[[false; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
     let mut queue = VecDeque::new();
     let mut occupied_tiles = Vec::new();
 
     let start_pos = position.to_chunk();
-    if start_pos.x >= CHUNK_SIZE || start_pos.y >= CHUNK_SIZE || start_pos.z >= CHUNK_SIZE {return;}
+    if start_pos.x >= CHUNK_SIZE || start_pos.y >= CHUNK_SIZE || start_pos.z >= CHUNK_SIZE {
+        return;
+    }
     queue.push_back(start_pos);
     visited[start_pos.x as usize][start_pos.y as usize][start_pos.z as usize] = true;
     occupied_tiles.push(start_pos);
 
     while let Some(current_pos) = queue.pop_front() {
         for neighbor in get_neighbors(current_pos) {
-            if is_valid_position(neighbor) &&
-               !visited[neighbor.x as usize][neighbor.y as usize][neighbor.z as usize] &&
-               is_enemy_tile(world_layout, neighbor, handle, is_flying)
+            if
+                is_valid_position(neighbor) &&
+                !visited[neighbor.x as usize][neighbor.y as usize][neighbor.z as usize] &&
+                is_enemy_tile(world_layout, neighbor, handle)
             {
                 visited[neighbor.x as usize][neighbor.y as usize][neighbor.z as usize] = true;
                 queue.push_back(neighbor);
@@ -76,15 +88,21 @@ fn render_enemy(
 }
 
 fn is_enemy_tile(
-    world_layout: &[[[EntityType; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
+    world_layout: &[
+        [[Vec<EntityType>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+        CHUNK_SIZE as usize
+    ],
     pos: ChunkPos,
-    handle: EnemyHandle,
-    is_flying: bool,
+    handle: EnemyHandleType,
+
 ) -> bool {
-    match world_layout[pos.x as usize][pos.y as usize][pos.z as usize] {
-        EntityType::FlyingEnemy(h) if is_flying && h == handle => true,
-        EntityType::RegularEnemy(h) if !is_flying && h == handle => true,
-        _ => false,
+    match handle {
+        EnemyHandleType::Flying(h) => {
+            world_layout[pos.x as usize][pos.y as usize][pos.z as usize].contains(&EntityType::FlyingEnemy(h))
+        }
+        EnemyHandleType::Regular(h) => {
+            world_layout[pos.x as usize][pos.y as usize][pos.z as usize].contains(&EntityType::RegularEnemy(h))
+        }
     }
 }
 
@@ -100,7 +118,7 @@ fn get_neighbors(pos: ChunkPos) -> [ChunkPos; 6] {
 }
 
 fn is_valid_position(pos: ChunkPos) -> bool {
-    pos.x < CHUNK_SIZE as u8 && pos.y < CHUNK_SIZE as u8 && pos.z < CHUNK_SIZE as u8
+    pos.x < (CHUNK_SIZE as u8) && pos.y < (CHUNK_SIZE as u8) && pos.z < (CHUNK_SIZE as u8)
 }
 
 fn calculate_bounding_box(tiles: &[ChunkPos]) -> (Vec3, Vec3) {

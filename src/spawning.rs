@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use macroquad::rand;
-use shared::{ config::CHUNK_SIZE, types::{ ChunkVec3, EntityType, PossibleEnemySizes }, Vec3 };
+use shared::{ config::CHUNK_SIZE, types::{ ChunkVec3, EnemyType, EntityType, PossibleEnemySizes }, Vec3 };
 
 use crate::World;
 
@@ -29,7 +29,7 @@ impl SpawningSystem {
             spawn_configs: vec![
                 // Minute 0
                 SpawnConfig {
-                    enemies_per_minute: 30,
+                    enemies_per_minute: 28,
                     size_weights: [0.8, 0.2, 0.0, 0.0],
                     boss_spawn_minutes: vec![],
                 },
@@ -143,12 +143,13 @@ impl SpawningSystem {
         let position = self.get_random_position_ground_enemy();
         let velocity = self.get_random_velocity();
         let health = self.get_random_health();
-        let enemy_index = world.regular_enemies.new_enemy(position, velocity, size, health);
+        let enemy_index = world.enemies.new_enemy(position, velocity, size, health, EnemyType::Regular);
 
         // Place the enemy in the world layout
         let chunk_pos = position.0;
-        world.world_layout[chunk_pos.x as usize][chunk_pos.y as usize][chunk_pos.z as usize] =
-            EntityType::RegularEnemy(enemy_index);
+        world.world_layout[chunk_pos.x as usize][chunk_pos.y as usize][chunk_pos.z as usize].push(
+            EntityType::Enemy(enemy_index)
+        );
     }
     fn get_random_health(&self) -> u8 {
         return rand::gen_range(1, 4);
@@ -193,16 +194,18 @@ impl SpawningSystem {
         let position = self.get_random_position_ground_enemy();
         let velocity = self.get_random_velocity();
         let health = self.get_random_health() * 3;
-        let boss_index = world.regular_enemies.new_enemy(
+        let boss_index = world.enemies.new_enemy(
             position,
             velocity,
             PossibleEnemySizes::BOSS,
             health,
+            EnemyType::Regular,
         );
 
         let chunk_pos = position.0;
-        world.world_layout[chunk_pos.x as usize][chunk_pos.y as usize][chunk_pos.z as usize] =
-            EntityType::RegularEnemy(boss_index);
+        world.world_layout[chunk_pos.x as usize][chunk_pos.y as usize][chunk_pos.z as usize].push(
+            EntityType::Enemy(boss_index)
+        );
     }
 }
 
