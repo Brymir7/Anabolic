@@ -60,12 +60,13 @@ impl Enemies {
             self.animation_state.swap_remove(index);
             self.size.swap_remove(index);
             self.healths.swap_remove(index);
+            self.e_type.swap_remove(index);
         }
     }
-    pub fn get_occupied_tiles(pos: &ChunkVec3, hitbox: &Vec3) -> Vec<ChunkPos> {
+    pub fn get_occupied_tiles(pos: &ChunkVec3, half_hitbox: &Vec3) -> Vec<ChunkPos> {
         let mut res =Vec::new();
-        let start = ChunkVec3(pos.0 - *hitbox*0.5).to_chunk();
-        let end = ChunkVec3(pos.0 + *hitbox*0.5).to_chunk();
+        let start = ChunkVec3(pos.0 - *half_hitbox).to_chunk();
+        let end = ChunkVec3(pos.0 + *half_hitbox).to_chunk();
         for x in start.x..=end.x {
             for y in start.y..=end.y {
                 for z in start.z..=end.z {
@@ -75,6 +76,7 @@ impl Enemies {
                 }
             }
         }
+
         res
     } 
 }
@@ -161,9 +163,9 @@ impl ChunkVec3 {
     pub fn to_chunk(&self) -> ChunkPos {
         let data = self.0;
         let data = data.clamp(Vec3::splat(0.0), Vec3::splat(CHUNK_SIZE as f32 - 0.51)); // small enough to not get rounded to chunk size
-        assert!(data.x.round() < 255.0 && data.x >= 0.0);
-        assert!(data.y.round() < 255.0 && data.y >= 0.0);
-        assert!(data.z.round() < 255.0 && data.z >= 0.0);
+        debug_assert!(data.x.round() < 255.0 && data.x >= 0.0);
+        debug_assert!(data.y.round() < 255.0 && data.y >= 0.0);
+        debug_assert!(data.z.round() < 255.0 && data.z >= 0.0);
         return ChunkPos::new(data.x.round() as u8, data.y.round() as u8, data.z.round() as u8);
     }
 }

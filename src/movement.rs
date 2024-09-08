@@ -43,10 +43,10 @@ impl MovementSystem {
                 pos.0 + Vec3::new(new_pos.0.x - pos.0.x, new_pos.0.y - pos.0.y, 0.0)
             );
         }
-        new_pos.0 = new_pos.0.clamp(Vec3::splat(0.0), Vec3::splat((CHUNK_SIZE as f32) - 1.0));
+        new_pos.0 = new_pos.0.clamp(Vec3::splat(1.0), Vec3::splat((CHUNK_SIZE as f32) - 1.0));
         *pos = new_pos;
 
-        Self::update_world_position(chunk, EntityType::Player, &new_pos, &Vec3::splat(1.0));
+        Self::update_world_position(chunk, EntityType::Player, &new_pos, &Vec3::splat(0.5));
     }
 
     pub fn update_enemies(
@@ -59,9 +59,10 @@ impl MovementSystem {
             let (left, right) = enemies.positions.split_at_mut(i);
             let (current, right) = right.split_at_mut(1);
             let pos = &mut current[0];
+            let initial_pos = pos.clone();
             let other_positions: Vec<ChunkVec3> = left
                 .iter()
-                .chain([pos.clone()].iter()) // to upkeep valid handles
+                .chain([initial_pos].iter()) // to upkeep valid handles
                 .chain(right.iter())
                 .cloned()
                 .collect();
@@ -120,8 +121,8 @@ impl MovementSystem {
             {
                 pos.0.z = curr_pos.0.z - half_hitbox.z * vel.z.signum();
             }
-            let prev_tiles = &Enemies::get_occupied_tiles(&pos, &half_hitbox);
-            pos.0 = pos.0.clamp(Vec3::splat(0.0), Vec3::splat((CHUNK_SIZE as f32) - 1.0));
+            let prev_tiles = &Enemies::get_occupied_tiles(&initial_pos, &half_hitbox);
+            pos.0 = pos.0.clamp(vec3(1.0, 0.0, 1.0), Vec3::splat((CHUNK_SIZE as f32) - 1.0));
             Self::update_enemy_world_position(
                 prev_tiles,
                 &Enemies::get_occupied_tiles(&pos, &half_hitbox),
@@ -146,7 +147,7 @@ impl MovementSystem {
             match entity {
                 EntityType::Enemy(h_other) => {
                     if *h_other == handle {continue;}
-                    let half_hb2 = Enemies::get_hitbox_from_size(other_sizes[h_other.0 as usize]);
+                    let half_hb2 = Enemies::get_hitbox_from_size(other_sizes[h_other.0 as usize]) * 0.5;
                     let pos2 = other_positions[h_other.0 as usize];
                     if Self::intersect_hitbox(&pos.0, half_hb1, &pos2.0, &half_hb2) {
                         return false;
@@ -194,7 +195,7 @@ impl MovementSystem {
         chunk: &mut [[[Vec<EntityType>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize],
         enemy_type: EntityType
     ) {
-        assert!(match enemy_type {
+        debug_assert!(match enemy_type {
             EntityType::Enemy(_) => true,
             _ => false,
         });
@@ -205,6 +206,7 @@ impl MovementSystem {
             chunk[tile.x as usize][tile.y as usize][tile.z as usize].push(enemy_type);
         }
     }
+
     fn player_check_if_chunk_is_valid_pos(
         pos: &ChunkVec3,
         half_hb1: &Vec3,
@@ -218,7 +220,7 @@ impl MovementSystem {
         for entity in entities_in_chunk {
             match entity {
                 EntityType::Enemy(h_other) => {
-                    let half_hb2 = Enemies::get_hitbox_from_size(enemy_sizes[h_other.0 as usize]);
+                    let half_hb2 = Enemies::get_hitbox_from_size(enemy_sizes[h_other.0 as usize]) * 0.5;
                     let pos2 = enemy_pos[h_other.0 as usize];
                     if Self::intersect_hitbox(&pos.0, half_hb1, &pos2.0, &half_hb2) {
                         return false;

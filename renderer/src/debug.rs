@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use shared::{
     config::CHUNK_SIZE,
-    types::{ ChunkPos, ChunkVec3, EnemyHandleType, EntityType, FlyingEnemyHandle, RegularEnemyHandle },
+    types::{ ChunkPos, ChunkVec3, Enemies, EnemyHandle, EntityType },
     vec3,
     Vec3,
     BLUE,
@@ -18,16 +18,12 @@ pub fn render_enemy_world_positions(
         [[Vec<EntityType>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         CHUNK_SIZE as usize
     ],
-    flying_enemies: &[ChunkVec3],
-    regular_enemies: &[ChunkVec3]
+    enemies: &Enemies
 ) {
-    for (handle, &position) in flying_enemies.iter().enumerate() {
-        render_enemy(screen, world_layout, position, EnemyHandleType::Flying(FlyingEnemyHandle(handle as u16)), true);
+    for (handle, &position) in enemies.positions.iter().enumerate() {
+        render_enemy(screen, world_layout, position, EnemyHandle(handle as u16), true);
     }
 
-    for (handle, &position) in regular_enemies.iter().enumerate() {
-        render_enemy(screen, world_layout, position, EnemyHandleType::Regular(RegularEnemyHandle(handle as u16)), false);
-    }
     // for x in 0..world_layout.len() {
     //     for y in 0..world_layout.len() {
     //         for z in 0..world_layout.len() {
@@ -48,7 +44,7 @@ fn render_enemy(
         CHUNK_SIZE as usize
     ],
     position: ChunkVec3,
-    handle: EnemyHandleType,
+    handle: EnemyHandle,
     is_flying: bool
 ) {
     let mut visited = [[[false; CHUNK_SIZE as usize]; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
@@ -93,17 +89,10 @@ fn is_enemy_tile(
         CHUNK_SIZE as usize
     ],
     pos: ChunkPos,
-    handle: EnemyHandleType,
+    handle: EnemyHandle,
 
 ) -> bool {
-    match handle {
-        EnemyHandleType::Flying(h) => {
-            world_layout[pos.x as usize][pos.y as usize][pos.z as usize].contains(&EntityType::FlyingEnemy(h))
-        }
-        EnemyHandleType::Regular(h) => {
-            world_layout[pos.x as usize][pos.y as usize][pos.z as usize].contains(&EntityType::RegularEnemy(h))
-        }
-    }
+    return  world_layout[pos.x as usize][pos.y as usize][pos.z as usize].contains(&EntityType::Enemy(handle));
 }
 
 fn get_neighbors(pos: ChunkPos) -> [ChunkPos; 6] {

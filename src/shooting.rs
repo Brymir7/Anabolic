@@ -144,7 +144,7 @@ pub fn shoot(
             ).normalize();
             // make player a bit higher, so that when he looks down on smaller opponents he can hit them at their feet
             let event = shotgun_shoot(
-                player.pos + vec3(0.0, 0.4, 0.0),
+                player.pos + vec3(0.0, 0.0, 0.0),
                 front,
                 enemies,
                 world_layout

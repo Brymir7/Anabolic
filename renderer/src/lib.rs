@@ -22,7 +22,7 @@ use shared::{
     YELLOW, // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
 };
 pub mod animation;
-
+pub mod debug;
 pub trait Drawer {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color);
     fn draw_rectangle(&self, position: Vec2, width: f32, height: f32, color: Color);

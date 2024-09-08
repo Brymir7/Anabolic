@@ -48,6 +48,7 @@ mod hot_r_renderer {
             PossibleEnemySizes,
             AnimationCallbackEvent,
             WeaponType,
+            Enemies
         },
         Vec3,
     };
@@ -125,7 +126,8 @@ impl World {
             let size = self.enemies.size[index];
             let hitbox = Enemies::get_hitbox_from_size(size);
 
-            let occupied_tiles = Enemies::get_occupied_tiles(&position, &hitbox);
+            let occupied_tiles = Enemies::get_occupied_tiles(&position, &(hitbox*0.5));
+            println!("occupied {:?}", occupied_tiles);
             for tile in occupied_tiles {
                 self.world_layout[tile.x as usize][tile.y as usize][tile.z as usize].retain(
                     |entity| {
@@ -136,6 +138,23 @@ impl World {
                     }
                 );
             }
+            for (x, x_layer) in self.world_layout.iter().enumerate() {
+                for (y, y_layer) in x_layer.iter().enumerate() {
+                    for (z, entities) in y_layer.iter().enumerate() {
+                        for entity in entities {
+                            if let EntityType::Enemy(eh) = entity {
+                                if *eh == h {
+                                    println!(
+                                        "Enemy found at position: x: {}, y: {}, z: {}",
+                                        x, y, z
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
             self.enemies.remove_enemy(h);
         }
     }
@@ -175,7 +194,7 @@ impl World {
             &mut self.world_layout
         );
         // update_spawning_system(self, spawner, Duration::from_secs_f32(PHYSICS_FRAME_TIME));
-        assert!(
+        debug_assert!(
             self.world_layout[player_chunk.x as usize][player_chunk.y as usize][
                 player_chunk.z as usize
             ].contains(&EntityType::Player)
@@ -232,7 +251,7 @@ impl World {
                 player_vel.y = JUMP_STRENGTH;
             }
             self.player.vel = player_vel;
-            self.camera.position = self.player.pos.0 + vec3(0.0, 0.5, 0.0);
+            self.camera.position = self.player.pos.0;
             self.camera.up = up;
             self.camera.target = self.camera.position + front;
         }
@@ -272,12 +291,11 @@ impl World {
         //     &self.flying_enemies.animation_state,
         //     &self.flying_enemies.size
         // );
-        // hot_r_renderer::render_enemy_world_positions(
-        //     screen,
-        //     &self.world_layout,
-        //     &self.flying_enemies.positions,
-        //     &self.regular_enemies.positions
-        // );
+        hot_r_renderer::render_enemy_world_positions(
+            screen,
+            &self.world_layout,
+            &self.enemies,
+        );
         set_default_camera();
         let weapon_texture = TEXTURE_TYPE_TO_TEXTURE2D.get(&Textures::Weapon).expect(
             "Failed to load weapon"
@@ -295,7 +313,7 @@ impl World {
 pub struct DrawerImpl;
 impl Drawer for DrawerImpl {
     fn draw_cube_wires(&self, position: Vec3, size: Vec3, color: Color) {
-        macroquad::prelude::draw_cube_wires(position + vec3(0.5, 0.5, 0.5), size, color); // offset by 0.5 so that visual matches actual grid
+        macroquad::prelude::draw_cube_wires(position + vec3(0.0, 0.0, 0.0), size, color); // offset by 0.5 so that visual matches actual grid
     }
     fn draw_rectangle(&self, position: Vec2, width: f32, height: f32, color: Color) {
         macroquad::prelude::draw_rectangle(position.x, position.y, width, height, color);
