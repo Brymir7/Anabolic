@@ -1,4 +1,4 @@
-use macroquad::math::Vec3;
+use macroquad::{color::Color, math::Vec3};
 #[derive(Clone, Copy, Debug)]
 pub struct ChunkVec3(pub Vec3);
 
@@ -93,7 +93,7 @@ pub struct SolidBlocks {
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub enum Textures {
-    Weapon,
+    Pistol,
 }
 
 
@@ -101,4 +101,14 @@ pub enum Textures {
 pub enum WorldEvent {
     KillEnemy(EnemyHandle),
     HitEnemy(EnemyHandle),
+}
+
+#[derive(Clone, Copy)]
+pub struct Voxel {
+    pub position: Vec3,
+    pub color: Color,
+}
+
+pub struct VoxelMesh {
+    pub voxels: Vec<Voxel>,
 }

@@ -6,7 +6,7 @@ use std::{
 use shared::{
     config::{ SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE },
     types::{
-        AnimationState, ChunkVec3, Enemies, PossibleEnemySizes, Textures, WeaponType
+        AnimationState, ChunkVec3, Enemies, PossibleEnemySizes, Textures, VoxelMesh, WeaponType
     },
     vec2,
     vec3,
@@ -36,14 +36,15 @@ pub trait Drawer {
     fn draw_rectangle_lines(&self, position: Vec2, width: f32, height: f32, color: Color);
     fn draw_triangle(&self, pos1: Vec2, pos2: Vec2, pos3: Vec2, color: Color);
     fn draw_circle_lines(&self, position: Vec2, radius: f32, color: Color);
-    fn draw_texture_ex(
-        &self,
-        texture: &Textures,
-        x: f32,
-        y: f32,
-        color: Color,
-        params: DrawTextureParams
-    );
+    // fn draw_texture_ex(
+    //     &self,
+    //     texture: &Textures,
+    //     x: f32,
+    //     y: f32,
+    //     color: Color,
+    //     params: DrawTextureParams
+    // );
+    fn draw_voxel_mesh(&self, mesh: &VoxelMesh);
 }
 pub struct Screen {
     pub drawer: Box<dyn Drawer>,
@@ -298,8 +299,7 @@ pub fn render_flying_enemy_with_hitbox(
 #[no_mangle]
 pub fn render_player_pov(
     screen: &Screen,
-    texture_w: f32,
-    texture_h: f32,
+    voxel_mesh: &VoxelMesh,
     w_type: WeaponType,
     animation_state: &AnimationState
 ) {
@@ -310,16 +310,7 @@ pub fn render_player_pov(
     screen.drawer.draw_circle_lines(vec2(SCREEN_X_OFFSET, SCREEN_Y_OFFSET), 5.0, WHITE);
     match w_type {
         WeaponType::Shotgun => {
-            screen.drawer.draw_texture_ex(
-                &Textures::Weapon,
-                SCREEN_X_OFFSET - texture_w * 0.5 + bobbing * texture_w * 2.0,
-                (SCREEN_HEIGHT as f32) * 0.85 - texture_h,
-                Color::from_rgba(255, 255, 255, 255),
-                DrawTextureParams {
-                    dest_size: Some(Vec2::new(texture_w * 2.0, texture_h * 2.0)),
-                    ..Default::default()
-                }
-            )
+                screen.drawer.draw_voxel_mesh(voxel_mesh);
         }
     }
 }

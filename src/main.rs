@@ -11,26 +11,23 @@ use shared::{
         PHYSICS_FRAME_TIME,
         WORLD_UP,
     },
-    types::{ ChunkVec3, EntityType, Player, SolidBlocks, Textures, WorldEvent },
+    types::{ ChunkVec3, EntityType, Player, SolidBlocks, Textures, WorldEvent, VoxelMesh },
     Lazy,
 };
 use shooting::shoot;
 use spawning::{ update_spawning_system, SpawningSystem };
-use util::{ load_and_convert_texture, vec3_no_y };
+use util::{ load_and_convert_texture, load_voxel_data, vec3_no_y };
 pub mod movement;
 pub mod util;
 pub mod spawning;
 pub mod shooting;
 
 use render::{ Drawer, Screen };
-
-static TEXTURE_TYPE_TO_TEXTURE2D: Lazy<HashMap<Textures, Texture2D>> = Lazy::new(|| {
+static TEXTURE_TO_VOXEL_MESH: Lazy<HashMap<Textures, VoxelMesh>> = Lazy::new(|| {
     let mut map = HashMap::new();
     map.insert(
-        Textures::Weapon,
-        load_and_convert_texture(include_bytes!("../textures/weapon.png"), ImageFormat::Png)
+        Textures::Pistol,load_voxel_data("textures/pistol.vox")
     );
-
     map
 });
 #[hot_lib_reloader::hot_module(dylib = "render")]
@@ -48,7 +45,8 @@ mod hot_r_renderer {
             PossibleEnemySizes,
             AnimationCallbackEvent,
             WeaponType,
-            Enemies
+            Enemies,
+            VoxelMesh,
         },
         Vec3,
     };
@@ -306,13 +304,12 @@ impl World {
             &self.enemies,
         );
         set_default_camera();
-        let weapon_texture = TEXTURE_TYPE_TO_TEXTURE2D.get(&Textures::Weapon).expect(
+        let weapon_mesh = TEXTURE_TO_VOXEL_MESH.get(&Textures::Pistol).expect(
             "Failed to load weapon"
         );
         hot_r_renderer::render_player_pov(
             screen,
-            weapon_texture.width(),
-            weapon_texture.height(),
+            weapon_mesh,
             self.player.get_current_weapon().w_type,
             &self.player.animation_state
         );
@@ -352,22 +349,31 @@ impl Drawer for DrawerImpl {
     fn draw_circle_lines(&self, position: Vec2, radius: f32, color: Color) {
         macroquad::prelude::draw_circle_lines(position.x, position.y, radius, 1.0, color);
     }
-    fn draw_texture_ex(
-        &self,
-        texture: &Textures,
-        x: f32,
-        y: f32,
-        color: Color,
-        params: DrawTextureParams
-    ) {
-        match texture {
-            Textures::Weapon => {
-                let weapon_texture = TEXTURE_TYPE_TO_TEXTURE2D.get(&Textures::Weapon).expect(
-                    "Failed to load weapon"
-                );
-                macroquad::prelude::draw_texture_ex(weapon_texture, x, y, color, params);
-            }
+    // fn draw_texture_ex(
+    //     &self,
+    //     texture: &Textures,
+    //     x: f32,
+    //     y: f32,
+    //     color: Color,
+    //     params: DrawTextureParams
+    // ) {
+    //     match texture {
+    //         Textures::Weapon => {
+                
+    //         }
+    //     }
+    // }
+    fn draw_voxel_mesh(&self, mesh: &VoxelMesh) {
+        set_camera(& Camera3D { // aligns the weapon to the bottom left of the screen
+            position: vec3(-3.35, 5.35, -12.5), 
+            target: vec3(7.0, 5.0, 0.0),     
+            up: vec3(0.0, 1.0, 0.0),
+            ..Default::default()
+        });
+        for voxel in &mesh.voxels {
+            draw_cube(voxel.position, vec3(1.0, 1.0, 1.0) * 0.5, None, voxel.color);
         }
+        set_default_camera()
     }
 }
 
