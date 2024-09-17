@@ -191,7 +191,7 @@ impl World {
             &mut self.world_layout
         );
         MovementSystem::update_enemies(&self.player.pos, &mut self.enemies, &mut self.world_layout);
-        // update_spawning_system(self, spawner, Duration::from_secs_f32(PHYSICS_FRAME_TIME));
+        update_spawning_system(self, spawner, Duration::from_secs_f32(PHYSICS_FRAME_TIME));
         debug_assert!(
             self.world_layout[player_chunk.x as usize][player_chunk.y as usize][
                 player_chunk.z as usize

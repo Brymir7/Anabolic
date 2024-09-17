@@ -10,5 +10,5 @@ crate-type = ["rlib", "dylib"]
 shared = { path = "../shared" }
 
 [features]
-default = ["debug"]
+default = []
 debug = []

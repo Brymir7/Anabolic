@@ -45,9 +45,10 @@ impl MovementSystem {
             );
         }
         new_pos.0 = new_pos.0.clamp(Vec3::splat(1.0), Vec3::splat((CHUNK_SIZE as f32) - 1.0));
+        Self::update_world_position(chunk, EntityType::Player, &new_pos, &pos, &Vec3::splat(0.5));
         *pos = new_pos;
 
-        Self::update_world_position(chunk, EntityType::Player, &new_pos, &Vec3::splat(0.5));
+
     }
 
     pub fn update_enemies(
@@ -77,8 +78,8 @@ impl MovementSystem {
                 continue;
             }
             vel.y += GRAVITY * PHYSICS_FRAME_TIME;
-            // vel.x = (player_pos.0.x - pos.0.x) * 0.3; // make farther enemies quicker, but dont overdo it
-            // vel.z = (player_pos.0.z - pos.0.z) * 0.3;
+            vel.x = (player_pos.0.x - pos.0.x) * 0.3; // make farther enemies quicker, but dont overdo it
+            vel.z = (player_pos.0.z - pos.0.z) * 0.3;
 
             const MAX_XYZ: Vec3 = Vec3::splat((CHUNK_SIZE as f32) - 1.51); // small enough to not get rounded to chunk size
             let x_border = pos.0.x + half_hitbox.x * vel.x.signum();
@@ -171,12 +172,14 @@ impl MovementSystem {
                     let half_hb2 =
                         Enemies::get_hitbox_from_size(other_sizes[h_other.0 as usize]) * 0.5;
                     let pos2 = other_positions[h_other.0 as usize];
-                    if Self::intersect_hitbox(&pos.0, half_hb1, &pos2.0, &half_hb2) {
+                    let actual_hb_for_movement= *half_hb1*0.5;
+                    let actual_hb1_for_movement = half_hb2*0.5;
+                    if Self::intersect_hitbox(&pos.0, &actual_hb_for_movement, &pos2.0, &actual_hb1_for_movement) {
                         return false;
                     }
                 }
                 EntityType::Player => {
-                    println!("handle collision ");
+                    return false;
                 }
 
                 EntityType::SolidBlock | EntityType::InteractableBlock(_) => {
@@ -200,11 +203,24 @@ impl MovementSystem {
             CHUNK_SIZE as usize
         ],
         entity_type: EntityType,
-        pos: &ChunkVec3,
+        new_pos: &ChunkVec3,
+        prev_pos: &ChunkVec3,
         half_hitbox: &Vec3
     ) {
-        let start = ChunkVec3(pos.0 - *half_hitbox).to_chunk();
-        let end = ChunkVec3(pos.0 + *half_hitbox).to_chunk();
+        let start = ChunkVec3(prev_pos.0 - *half_hitbox).to_chunk();
+        let end = ChunkVec3(prev_pos.0 + *half_hitbox).to_chunk();
+        for x in start.x..=end.x {
+            for y in start.y..=end.y {
+                for z in start.z..=end.z {
+                    if x < CHUNK_SIZE && y < CHUNK_SIZE && z < CHUNK_SIZE {
+                        chunk[x as usize][y as usize][z as usize].retain(|e| *e != entity_type);
+                    }
+                }
+            }
+        }
+
+        let start = ChunkVec3(new_pos.0 - *half_hitbox).to_chunk();
+        let end = ChunkVec3(new_pos.0 + *half_hitbox).to_chunk();
         for x in start.x..=end.x {
             for y in start.y..=end.y {
                 for z in start.z..=end.z {

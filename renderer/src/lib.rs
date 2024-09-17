@@ -241,7 +241,7 @@ pub fn render_default_enemy_with_hitbox(
     let animation_phase = (animation_step / max_animation_step) * std::f32::consts::PI * 2.0;
     let leg_swing_offset = vel.length() * animation_phase.sin() * scale.x; // Forward/backward movement based on size and step
 
-    // Right leg (moves forward)
+    // Right leg 
     screen.drawer.draw_cube_wires(
         pos +
             vec3(
@@ -254,7 +254,7 @@ pub fn render_default_enemy_with_hitbox(
         RED
     );
 
-    // Left leg (moves backward)
+    // Left leg
     screen.drawer.draw_cube_wires(
         pos +
             vec3(
@@ -298,7 +298,6 @@ pub fn render_flying_enemy_with_hitbox(
     let size_animation = ((animation_step * PI).sin() * 2.0).max(0.5);
     // HITBOX
     screen.drawer.draw_cube_wires(pos, Enemies::get_hitbox_from_size(size), GRAY);
-
     screen.drawer.draw_cube_wires(pos, Vec3::splat(1.0) * scale * size_animation, RED);
     screen.drawer.draw_cube_wires(pos, Vec3::splat(0.5) * scale * size_animation, YELLOW);
 }

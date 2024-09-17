@@ -20,6 +20,7 @@ pub fn render_enemy_world_positions(
     ],
     enemies: &Enemies
 ) {
+    #[cfg(feature = "debug")]
     for (handle, &position) in enemies.positions.iter().enumerate() {
         render_enemy(screen, world_layout, position, EnemyHandle(handle as u16), true);
     }

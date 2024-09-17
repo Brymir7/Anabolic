@@ -1,7 +1,11 @@
 use std::time::Duration;
 
 use macroquad::rand;
-use shared::{ config::CHUNK_SIZE, types::{ ChunkVec3, EnemyType, EntityType, PossibleEnemySizes }, Vec3 };
+use shared::{
+    config::CHUNK_SIZE,
+    types::{ ChunkVec3, EnemyType, EntityType, PossibleEnemySizes },
+    Vec3,
+};
 
 use crate::World;
 
@@ -142,8 +146,14 @@ impl SpawningSystem {
         let size = self.get_random_size(&config.size_weights);
         let position = self.get_random_position_ground_enemy();
         let velocity = self.get_random_velocity();
-        let health = self.get_random_health();
-        let enemy_index = world.enemies.new_enemy(position, velocity, size, health, EnemyType::Regular);
+        let health = self.get_health_based_on_size(size);
+        let enemy_index = world.enemies.new_enemy(
+            position,
+            velocity,
+            size,
+            health,
+            EnemyType::Regular
+        );
 
         // Place the enemy in the world layout
         let chunk_pos = position.0;
@@ -151,8 +161,21 @@ impl SpawningSystem {
             EntityType::Enemy(enemy_index)
         );
     }
-    fn get_random_health(&self) -> u8 {
-        return rand::gen_range(1, 4);
+    fn get_health_based_on_size(&self, size: PossibleEnemySizes) -> u8 {
+        match size {
+            PossibleEnemySizes::SMALL => {
+                return 1;
+            }
+            PossibleEnemySizes::BOSS => {
+                return 10;
+            }
+            PossibleEnemySizes::LARGE => {
+                return 5;
+            }
+            PossibleEnemySizes::MEDIUM => {
+                return 3;
+            }
+        }
     }
     fn get_random_size(&self, weights: &[f32; 4]) -> PossibleEnemySizes {
         let random_value: f32 = rand::gen_range(0.0, 1.0);
@@ -193,13 +216,13 @@ impl SpawningSystem {
     fn spawn_boss(&self, world: &mut World) {
         let position = self.get_random_position_ground_enemy();
         let velocity = self.get_random_velocity();
-        let health = self.get_random_health() * 3;
+        let health = self.get_health_based_on_size(PossibleEnemySizes::BOSS);
         let boss_index = world.enemies.new_enemy(
             position,
             velocity,
             PossibleEnemySizes::BOSS,
             health,
-            EnemyType::Regular,
+            EnemyType::Regular
         );
 
         let chunk_pos = position.0;
