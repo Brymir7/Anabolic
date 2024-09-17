@@ -1,25 +1,10 @@
-use std::{
-    collections::{ HashMap, VecDeque },
-    f32::consts::{ FRAC_PI_2, FRAC_PI_4, FRAC_PI_8, PI },
-};
+
+use std::f32::consts::PI;
 
 use shared::{
-    config::{ SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE },
-    types::{
-        AnimationState, ChunkVec3, Enemies, EnemyType, PossibleEnemySizes, Textures, VoxelMesh, WeaponType
-    },
-    vec2,
-    vec3,
-    Color,
-    DrawRectangleParams,
-    DrawTextureParams,
-    Vec2,
-    Vec3,
-    GRAY,
-    GREEN,
-    RED,
-    WHITE,
-    YELLOW, // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
+    config::{ SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE }, types::{
+        AnimationState, ChunkVec3, CustomCamera3D, Enemies, EnemyType, PossibleEnemySizes, VoxelMesh, WeaponType
+    }, vec2, vec3, Camera, Camera3D, Color, DrawRectangleParams, Vec2, Vec3, GRAY, GREEN, RED, WHITE, YELLOW // dont use macroquad types here, then avoid dependency and then we could make it compile quicker ?
 };
 pub mod animation;
 pub mod debug;
@@ -58,10 +43,7 @@ pub fn render_solid_blocks(screen: &Screen, positions: &Vec<ChunkVec3>) {
     }
 }
 #[no_mangle]
-pub fn render_regular_enemies(
-    screen: &Screen,
-    enemies: &Enemies,
-) {
+pub fn render_regular_enemies(screen: &Screen, enemies: &Enemies) {
     for (i, enemy) in enemies.positions.iter().enumerate() {
         #[cfg(not(feature = "debug"))]
         render_default_enemy(
@@ -124,7 +106,6 @@ pub fn render_default_enemy(
     animation_step: f32,
     max_animation_step: f32
 ) {
-    
     if e_type == EnemyType::Empty {
         return;
     }
@@ -243,7 +224,7 @@ pub fn render_default_enemy_with_hitbox(
     let animation_phase = (animation_step / max_animation_step) * std::f32::consts::PI * 2.0;
     let leg_swing_offset = vel.length() * animation_phase.sin() * scale.x; // Forward/backward movement based on size and step
 
-    // Right leg 
+    // Right leg
     screen.drawer.draw_cube_wires(
         pos +
             vec3(
@@ -304,6 +285,8 @@ pub fn render_flying_enemy_with_hitbox(
     screen.drawer.draw_cube_wires(pos, Vec3::splat(0.5) * scale * size_animation, YELLOW);
 }
 
+
+
 #[no_mangle]
 pub fn render_player_pov(
     screen: &Screen,
@@ -316,9 +299,13 @@ pub fn render_player_pov(
     let bobbing = (animation_state.current_step * PI).sin() * 0.25;
     // CROSSHAIR
     screen.drawer.draw_circle_lines(vec2(SCREEN_X_OFFSET, SCREEN_Y_OFFSET), 5.0, WHITE);
+
+
     match w_type {
         WeaponType::Shotgun => {
-                screen.drawer.draw_voxel_mesh(voxel_mesh);
+            screen.drawer.draw_voxel_mesh(
+                voxel_mesh
+            );
         }
     }
 }

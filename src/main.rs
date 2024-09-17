@@ -1,5 +1,8 @@
-use std::{ collections::{ HashMap, VecDeque }, fs::DirEntry, process::exit, time::Duration };
-use shared::{ config::window_conf, types::{ ChunkPos, Enemies, EnemyHandle } };
+use std::{ collections::{ HashMap, VecDeque }, process::exit, time::Duration };
+use shared::{
+    config::{ window_conf, SCREEN_HEIGHT, SCREEN_WIDTH },
+    types::{ ChunkPos, CustomCamera3D, Enemies, EnemyHandle },
+};
 use macroquad::prelude::*;
 use movement::MovementSystem;
 use shared::{
@@ -16,7 +19,7 @@ use shared::{
 };
 use shooting::shoot;
 use spawning::{ update_spawning_system, SpawningSystem };
-use util::{ load_and_convert_texture, load_voxel_data, vec3_no_y };
+use util::{ load_voxel_data, vec3_no_y };
 pub mod movement;
 pub mod util;
 pub mod spawning;
@@ -298,14 +301,15 @@ impl World {
         set_default_camera();
         draw_text(
             &format!("Enemies: {}", self.enemies.e_type.len()),
-            SCREEN_WIDTH as f32 - 150.0, // X position (top left corner)
+            (SCREEN_WIDTH as f32) - 150.0, // X position (top left corner)
             20.0, // Y position (top left corner)
             30.0, // Font size
-            WHITE, // Color
+            WHITE // Color
         );
         let weapon_mesh = TEXTURE_TO_VOXEL_MESH.get(&Textures::Pistol).expect(
             "Failed to load weapon"
         );
+
         hot_r_renderer::render_player_pov(
             screen,
             weapon_mesh,
@@ -350,18 +354,20 @@ impl Drawer for DrawerImpl {
     }
 
     fn draw_voxel_mesh(&self, mesh: &VoxelMesh) {
-        set_camera(
-            &(Camera3D { // aligns the weapon to the bottom left of the screen
-                position: vec3(-3.35, 5.35, -12.5),
-                target: vec3(7.0, 5.0, 0.0),
+        let camera = CustomCamera3D::new(
+            Camera3D {
+                position: vec3(-4.35, 4.35, -12.5),
+                target: vec3(10.0, 5.0, 0.0),
                 up: vec3(0.0, 1.0, 0.0),
                 ..Default::default()
-            })
+            },
+            false, // Start with depth testing disabled
         );
+        set_camera(&camera);
         for voxel in &mesh.voxels {
-            draw_cube(voxel.position, vec3(1.0, 1.0, 1.0) * 0.5, None, voxel.color);
+                draw_cube(voxel.position, vec3(1.0, 1.0, 1.0) * 0.5, None, voxel.color);
         }
-        set_default_camera()
+        set_default_camera();
     }
 }
 

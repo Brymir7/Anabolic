@@ -120,10 +120,10 @@ impl SpawningSystem {
             &self.spawn_configs
                 [self.current_minute.min((self.spawn_configs.len() as u32) - 1) as usize];
 
-        // Calculate spawn interval
+
         let spawn_interval = Duration::from_secs(60) / (config.enemies_per_minute as u32);
 
-        // Spawn an enemy if enough time has passed and we haven't spawned all enemies for this minute
+
         if
             self.time_since_last_spawn >= spawn_interval &&
             self.enemies_spawned_this_minute < config.enemies_per_minute
@@ -133,7 +133,6 @@ impl SpawningSystem {
             self.enemies_spawned_this_minute += 1;
         }
 
-        // Spawn boss if it's a boss spawn minute and we haven't spawned all enemies yet
         if
             config.boss_spawn_minutes.contains(&self.current_minute) &&
             self.enemies_spawned_this_minute == 0

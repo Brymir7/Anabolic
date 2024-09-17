@@ -1,4 +1,4 @@
-use macroquad::{color::Color, math::Vec3};
+use macroquad::{camera::Camera3D, color::Color, math::Vec3};
 #[derive(Clone, Copy, Debug)]
 pub struct ChunkVec3(pub Vec3);
 
@@ -114,4 +114,8 @@ pub struct Voxel {
 
 pub struct VoxelMesh {
     pub voxels: Vec<Voxel>,
+}
+pub struct CustomCamera3D {
+   pub camera: Camera3D,
+   pub depth_enabled: bool,
 }

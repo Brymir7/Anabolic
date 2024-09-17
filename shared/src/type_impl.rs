@@ -1,11 +1,11 @@
 use std::ops::Add;
 
-use macroquad::math::{vec3, Vec3};
+use macroquad::{camera::{Camera, Camera3D}, math::{vec3, Mat4, Vec3}, texture::RenderPass};
 
 use crate::{
     config::{CHUNK_SIZE, INITIAL_PLAYER_POS},
     types::{
-        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec3, CurrWeapon, Enemies, EnemyHandle, EnemyType, EntityType, MaxWeapon, Player, PossibleEnemySizes, SolidBlocks, Weapon, WeaponType, WorldEvent
+        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec3, CurrWeapon, CustomCamera3D, Enemies, EnemyHandle, EnemyType, EntityType, MaxWeapon, Player, PossibleEnemySizes, SolidBlocks, Weapon, WeaponType, WorldEvent
     },
 };
 
@@ -182,3 +182,32 @@ impl ChunkVec3 {
     }
 }
 
+
+impl CustomCamera3D {
+    pub fn new(camera: Camera3D, depth_enabled: bool) -> Self {
+        Self { camera, depth_enabled }
+    }
+
+    pub fn set_depth_enabled(&mut self, enabled: bool) {
+        self.depth_enabled = enabled;
+    }
+}
+
+impl Camera for CustomCamera3D {
+    fn matrix(&self) -> Mat4 {
+        // Delegate to the inner Camera3D
+        self.camera.matrix()
+    }
+
+    fn depth_enabled(&self) -> bool {
+        self.depth_enabled
+    }
+
+    fn render_pass(&self) -> Option<RenderPass> {
+        self.camera.render_pass()
+    }
+
+    fn viewport(&self) -> Option<(i32, i32, i32, i32)> {
+        self.camera.viewport()
+    }
+}
