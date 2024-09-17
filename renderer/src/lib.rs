@@ -124,6 +124,7 @@ pub fn render_default_enemy(
     animation_step: f32,
     max_animation_step: f32
 ) {
+    
     if e_type == EnemyType::Empty {
         return;
     }
@@ -133,7 +134,7 @@ pub fn render_default_enemy(
         PossibleEnemySizes::LARGE => Vec3::splat(0.75),
         PossibleEnemySizes::BOSS => Vec3::splat(1.25),
     };
-    let is_x_dominant = vel.x < vel.z;
+    let is_x_dominant = vel.x.abs() < vel.z.abs();
     let x_multiplier = is_x_dominant as u8;
     let z_multiplier = !is_x_dominant as u8;
 
@@ -164,7 +165,7 @@ pub fn render_default_enemy(
 
     // LEGS
     let animation_phase = (animation_step / max_animation_step) * std::f32::consts::PI * 2.0;
-    let leg_swing_offset = vel.length() * animation_phase.sin() * scale.x; // Forward/backward movement based on size and step
+    let leg_swing_offset = vel.length().min(scale.x.max(scale.z)) * animation_phase.sin() * scale.x; // Forward/backward movement based on size and step
 
     // Right leg (moves forward)
     screen.drawer.draw_cube_wires(
@@ -208,6 +209,7 @@ pub fn render_default_enemy_with_hitbox(
     }
     let scale = Enemies::get_vec3_size(size);
     let is_x_dominant = vel.x.abs() < vel.z.abs();
+
     let x_multiplier = is_x_dominant as u8;
     let z_multiplier = !is_x_dominant as u8;
 

@@ -1,5 +1,5 @@
 use shared::{
-    config::{ CHUNK_SIZE, GRAVITY, MOVE_SPEED, PHYSICS_FRAME_TIME },
+    config::{ CHUNK_SIZE, GRAVITY, MOVE_SPEED, PHYSICS_FRAME_TIME, WORLD_BORDER },
     types::{ ChunkPos, ChunkVec3, Enemies, EnemyHandle, EnemyType, EntityType, PossibleEnemySizes },
     vec3,
     Vec3,
@@ -47,8 +47,6 @@ impl MovementSystem {
         new_pos.0 = new_pos.0.clamp(Vec3::splat(1.0), Vec3::splat((CHUNK_SIZE as f32) - 1.0));
         Self::update_world_position(chunk, EntityType::Player, &new_pos, &pos, &Vec3::splat(0.5));
         *pos = new_pos;
-
-
     }
 
     pub fn update_enemies(
@@ -73,15 +71,15 @@ impl MovementSystem {
 
             let enemy_handle = EnemyHandle(i as u16);
             let half_hitbox = Enemies::get_hitbox_from_size(enemies.size[i]) * 0.5;
-            let mut vel = enemies.velocities[i];
+            let vel = &mut enemies.velocities[i];
             if enemies.e_type[i] == EnemyType::Empty {
                 continue;
             }
-            vel.y += GRAVITY * PHYSICS_FRAME_TIME;
+
             vel.x = (player_pos.0.x - pos.0.x) * 0.3; // make farther enemies quicker, but dont overdo it
             vel.z = (player_pos.0.z - pos.0.z) * 0.3;
 
-            const MAX_XYZ: Vec3 = Vec3::splat((CHUNK_SIZE as f32) - 1.51); // small enough to not get rounded to chunk size
+            const MAX_XYZ: Vec3 = Vec3::splat((CHUNK_SIZE as f32) - WORLD_BORDER); // small enough to not get rounded to chunk size
             let x_border = pos.0.x + half_hitbox.x * vel.x.signum();
             let curr_pos = ChunkVec3(
                 Vec3::new(x_border + vel.x * PHYSICS_FRAME_TIME, pos.0.y, pos.0.z)
@@ -117,7 +115,8 @@ impl MovementSystem {
                 )
             {
                 pos.0.y = curr_pos.0.y - half_hitbox.y * vel.y.signum();
-            }
+                vel.y += GRAVITY * PHYSICS_FRAME_TIME;
+            } 
             let z_border = pos.0.z + half_hitbox.z * vel.z.signum();
             let curr_pos = ChunkVec3(
                 Vec3::new(pos.0.x, pos.0.y, z_border + vel.z * PHYSICS_FRAME_TIME)
@@ -166,15 +165,23 @@ impl MovementSystem {
                     if *h_other == handle {
                         continue;
                     }
-                    if other_types[h_other.0 as usize] == EnemyType::Empty { // unnecessary, but keep to make sure it doesnt break, -> theres hould never be a reference to an empty enemy in the world layout
+                    if other_types[h_other.0 as usize] == EnemyType::Empty {
+                        // unnecessary, but keep to make sure it doesnt break, -> theres hould never be a reference to an empty enemy in the world layout
                         continue;
                     }
                     let half_hb2 =
                         Enemies::get_hitbox_from_size(other_sizes[h_other.0 as usize]) * 0.5;
                     let pos2 = other_positions[h_other.0 as usize];
-                    let actual_hb_for_movement= *half_hb1*0.5;
-                    let actual_hb1_for_movement = half_hb2*0.5;
-                    if Self::intersect_hitbox(&pos.0, &actual_hb_for_movement, &pos2.0, &actual_hb1_for_movement) {
+                    let actual_hb_for_movement = *half_hb1 * 0.5;
+                    let actual_hb1_for_movement = half_hb2 * 0.5;
+                    if
+                        Self::intersect_hitbox(
+                            &pos.0,
+                            &actual_hb_for_movement,
+                            &pos2.0,
+                            &actual_hb1_for_movement
+                        )
+                    {
                         return false;
                     }
                 }

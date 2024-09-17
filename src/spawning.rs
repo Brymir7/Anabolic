@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use macroquad::rand;
 use shared::{
-    config::CHUNK_SIZE,
+    config::{CHUNK_SIZE, WORLD_BORDER},
     types::{ ChunkVec3, EnemyType, EntityType, PossibleEnemySizes },
     Vec3,
 };
@@ -198,15 +198,23 @@ impl SpawningSystem {
     }
 
     fn get_random_position_ground_enemy(&self) -> ChunkVec3 {
-        // Implement logic to get a random position within the world bounds
+        let border_threshold = WORLD_BORDER + 2.0; // Distance from the border where enemies can spawn
+        let x = if rand::gen_range(0.0, 1.0) > 0.5 {
+            rand::gen_range(0.0, border_threshold)
+        } else {
+            rand::gen_range((CHUNK_SIZE as f32) - border_threshold, CHUNK_SIZE as f32 - WORLD_BORDER)
+        };
+        let z = if rand::gen_range(0.0, 1.0) > 0.5 {
+            rand::gen_range(0.0, border_threshold)
+        } else {
+            rand::gen_range((CHUNK_SIZE as f32) - border_threshold, CHUNK_SIZE as f32 - WORLD_BORDER)
+        };
+    
         ChunkVec3(
-            Vec3::new(
-                rand::gen_range(0.0, (CHUNK_SIZE as f32) - 1.0),
-                1.0,
-                rand::gen_range(0.0, (CHUNK_SIZE as f32) - 1.0)
-            )
+            Vec3::new(x, 8.0, z)
         )
     }
+    
 
     fn get_random_velocity(&self) -> Vec3 {
         // Implement logic to get a random velocity

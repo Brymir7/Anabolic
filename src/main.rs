@@ -95,10 +95,10 @@ impl World {
                 world.solid_blocks.new_block(ChunkVec3(vec3(x as f32, 0.0, z as f32)));
             }
         }
-        world.world_layout[3][1][3].push(
+        world.world_layout[3][8][3].push(
             EntityType::Enemy(
                 world.enemies.new_enemy(
-                    ChunkVec3(vec3(3.0, 1.0, 3.0)),
+                    ChunkVec3(vec3(3.0, 8.0, 3.0)),
                     vec3(1.0, 0.0, 0.0),
                     shared::types::PossibleEnemySizes::SMALL,
                     1,
@@ -106,10 +106,10 @@ impl World {
                 )
             )
         );
-        world.world_layout[12][1][3].push(
+        world.world_layout[12][8][3].push(
             EntityType::Enemy(
                 world.enemies.new_enemy(
-                    ChunkVec3(vec3(12.0, 1.0, 3.0)),
+                    ChunkVec3(vec3(12.0, 8.0, 3.0)),
                     vec3(-1.0, 0.0, 0.0),
                     shared::types::PossibleEnemySizes::SMALL,
                     1,
@@ -286,18 +286,23 @@ impl World {
     #[cfg(feature = "hot-reload")]
     fn draw(&mut self, screen: &Screen) {
         // needs to be mutable because of animation states, maybe refactor into a world separate struct?
-        set_camera(&self.camera);
 
+        use shared::config::SCREEN_WIDTH;
+        set_camera(&self.camera);
         hot_r_renderer::update_animations(&mut self.enemies.animation_state, get_frame_time());
         hot_r_renderer::update_animation(&mut self.player.animation_state, get_frame_time());
         hot_r_renderer::render_solid_blocks(screen, &self.solid_blocks.positions);
-        hot_r_renderer::render_regular_enemies(
-            screen,
-            &self.enemies,
-        );
+        hot_r_renderer::render_regular_enemies(screen, &self.enemies);
 
         hot_r_renderer::render_enemy_world_positions(screen, &self.world_layout, &self.enemies);
         set_default_camera();
+        draw_text(
+            &format!("Enemies: {}", self.enemies.e_type.len()),
+            SCREEN_WIDTH as f32 - 150.0, // X position (top left corner)
+            20.0, // Y position (top left corner)
+            30.0, // Font size
+            WHITE, // Color
+        );
         let weapon_mesh = TEXTURE_TO_VOXEL_MESH.get(&Textures::Pistol).expect(
             "Failed to load weapon"
         );

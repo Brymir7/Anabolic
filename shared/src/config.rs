@@ -13,6 +13,7 @@ pub const JUMP_STRENGTH: f32 = 3.0;
 pub const TILE_SIZE: f32 = 1.0;
 pub const SCREEN_WIDTH: i32 = 1920;
 pub const SCREEN_HEIGHT: i32 = 1080;
+pub const WORLD_BORDER: f32 = 1.51; // just enough to not get rounded
 pub fn window_conf() -> Conf {
     Conf {
         window_title: "Anabolic".to_owned(),
