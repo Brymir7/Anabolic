@@ -6,7 +6,7 @@ use std::{
 use shared::{
     config::{ SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE },
     types::{
-        AnimationState, ChunkVec3, Enemies, PossibleEnemySizes, Textures, VoxelMesh, WeaponType
+        AnimationState, ChunkVec3, Enemies, EnemyType, PossibleEnemySizes, Textures, VoxelMesh, WeaponType
     },
     vec2,
     vec3,
@@ -60,29 +60,28 @@ pub fn render_solid_blocks(screen: &Screen, positions: &Vec<ChunkVec3>) {
 #[no_mangle]
 pub fn render_regular_enemies(
     screen: &Screen,
-    positions: &Vec<ChunkVec3>,
-    velocities: &Vec<Vec3>,
-    animations: &Vec<AnimationState>,
-    sizes: &Vec<PossibleEnemySizes>
+    enemies: &Enemies,
 ) {
-    for (i, enemy) in positions.iter().enumerate() {
+    for (i, enemy) in enemies.positions.iter().enumerate() {
         #[cfg(not(feature = "debug"))]
         render_default_enemy(
             screen,
+            enemies.e_type[i],
             *enemy,
-            velocities[i],
-            sizes[i],
-            animations[i].current_step,
-            animations[i].max_step
+            enemies.velocities[i],
+            enemies.size[i],
+            enemies.animation_state[i].current_step,
+            enemies.animation_state[i].max_step
         );
         #[cfg(feature = "debug")]
         render_default_enemy_with_hitbox(
             screen,
+            enemies.e_type[i],
             *enemy,
-            velocities[i],
-            sizes[i],
-            animations[i].current_step,
-            animations[i].max_step
+            enemies.velocities[i],
+            enemies.size[i],
+            enemies.animation_state[i].current_step,
+            enemies.animation_state[i].max_step
         );
     }
 }
@@ -118,12 +117,16 @@ pub fn render_flying_enemies(
 #[no_mangle]
 pub fn render_default_enemy(
     screen: &Screen,
+    e_type: EnemyType,
     pos: ChunkVec3,
     vel: Vec3,
     size: PossibleEnemySizes,
     animation_step: f32,
     max_animation_step: f32
 ) {
+    if e_type == EnemyType::Empty {
+        return;
+    }
     let scale = match size {
         PossibleEnemySizes::SMALL => Vec3::splat(0.25),
         PossibleEnemySizes::MEDIUM => Vec3::splat(0.5),
@@ -193,12 +196,16 @@ pub fn render_default_enemy(
 #[no_mangle]
 pub fn render_default_enemy_with_hitbox(
     screen: &Screen,
+    e_type: EnemyType,
     pos: ChunkVec3,
     vel: Vec3,
     size: PossibleEnemySizes,
     animation_step: f32,
     max_animation_step: f32
 ) {
+    if e_type == EnemyType::Empty {
+        return;
+    }
     let scale = Enemies::get_vec3_size(size);
     let is_x_dominant = vel.x.abs() < vel.z.abs();
     let x_multiplier = is_x_dominant as u8;

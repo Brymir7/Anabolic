@@ -73,11 +73,14 @@ pub enum PossibleEnemySizes {
     LARGE,
     BOSS,
 } 
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum EnemyType {
     Flying,
     Regular,
     Cube,
+    Empty,
 }
+
 pub struct Enemies {
     pub positions: Vec<ChunkVec3>,
     pub velocities: Vec<Vec3>,

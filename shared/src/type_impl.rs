@@ -5,7 +5,7 @@ use macroquad::math::{vec3, Vec3};
 use crate::{
     config::{CHUNK_SIZE, INITIAL_PLAYER_POS},
     types::{
-        AnimationCallbackEvent, AnimationState, ChunkPos,  ChunkVec3, CurrWeapon, Enemies, EnemyHandle, EnemyType, MaxWeapon, Player, PossibleEnemySizes, SolidBlocks, Weapon, WeaponType, WorldEvent
+        AnimationCallbackEvent, AnimationState, ChunkPos, ChunkVec3, CurrWeapon, Enemies, EnemyHandle, EnemyType, EntityType, MaxWeapon, Player, PossibleEnemySizes, SolidBlocks, Weapon, WeaponType, WorldEvent
     },
 };
 
@@ -28,6 +28,20 @@ impl Enemies {
         health: u8,
         e_type: EnemyType,
     ) -> EnemyHandle {
+        for (idx, curr_e_type) in self.e_type.iter_mut().enumerate() {
+            match curr_e_type {
+                EnemyType::Empty => {
+                    *curr_e_type = e_type;
+                    self.positions[idx] = pos;
+                    self.velocities[idx] = vel;
+                    self.animation_state.push(AnimationState::default());
+                    self.size[idx] = size;
+                    self.healths[idx] = health;
+                    return EnemyHandle(idx as u16);
+                }
+                _ => {continue;}
+            }
+        }
         self.positions.push(pos);
         self.velocities.push(vel);
         self.animation_state.push(AnimationState::default());
@@ -55,12 +69,7 @@ impl Enemies {
     pub fn remove_enemy(&mut self, h: EnemyHandle) {
         let index = h.0 as usize;
         if index < self.positions.len() {
-            self.positions.swap_remove(index);
-            self.velocities.swap_remove(index);
-            self.animation_state.swap_remove(index);
-            self.size.swap_remove(index);
-            self.healths.swap_remove(index);
-            self.e_type.swap_remove(index);
+            self.e_type[index] = EnemyType::Empty;
         }
     }
     pub fn get_occupied_tiles(pos: &ChunkVec3, half_hitbox: &Vec3) -> Vec<ChunkPos> {

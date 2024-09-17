@@ -25,9 +25,7 @@ pub mod shooting;
 use render::{ Drawer, Screen };
 static TEXTURE_TO_VOXEL_MESH: Lazy<HashMap<Textures, VoxelMesh>> = Lazy::new(|| {
     let mut map = HashMap::new();
-    map.insert(
-        Textures::Pistol,load_voxel_data("textures/pistol.vox")
-    );
+    map.insert(Textures::Pistol, load_voxel_data("textures/pistol.vox"));
     map
 });
 #[hot_lib_reloader::hot_module(dylib = "render")]
@@ -47,6 +45,7 @@ mod hot_r_renderer {
             WeaponType,
             Enemies,
             VoxelMesh,
+            EnemyType,
         },
         Vec3,
     };
@@ -96,35 +95,39 @@ impl World {
                 world.solid_blocks.new_block(ChunkVec3(vec3(x as f32, 0.0, z as f32)));
             }
         }
-        world.world_layout[3][1][3].push(EntityType::Enemy(
-            world.enemies.new_enemy(
-                ChunkVec3(vec3(3.0, 1.0, 3.0)),
-                vec3(1.0, 0.0, 0.0),
-                shared::types::PossibleEnemySizes::SMALL,
-                1,
-                shared::types::EnemyType::Regular,
+        world.world_layout[3][1][3].push(
+            EntityType::Enemy(
+                world.enemies.new_enemy(
+                    ChunkVec3(vec3(3.0, 1.0, 3.0)),
+                    vec3(1.0, 0.0, 0.0),
+                    shared::types::PossibleEnemySizes::SMALL,
+                    1,
+                    shared::types::EnemyType::Regular
+                )
             )
-        ));
-        world.world_layout[12][1][3].push(EntityType::Enemy(
-            world.enemies.new_enemy(
-                ChunkVec3(vec3(12.0, 1.0, 3.0)),
-                vec3(-1.0, 0.0, 0.0),
-                shared::types::PossibleEnemySizes::SMALL,
-                1,
-                shared::types::EnemyType::Regular,
+        );
+        world.world_layout[12][1][3].push(
+            EntityType::Enemy(
+                world.enemies.new_enemy(
+                    ChunkVec3(vec3(12.0, 1.0, 3.0)),
+                    vec3(-1.0, 0.0, 0.0),
+                    shared::types::PossibleEnemySizes::SMALL,
+                    1,
+                    shared::types::EnemyType::Regular
+                )
             )
-        ));
+        );
         world
     }
 
-    fn remove_regular_enemy(&mut self, h: EnemyHandle) {
+    fn remove_enemy(&mut self, h: EnemyHandle) {
         let index = h.0 as usize;
         if index < self.enemies.positions.len() {
             let position = self.enemies.positions[index];
             let size = self.enemies.size[index];
             let hitbox = Enemies::get_hitbox_from_size(size);
 
-            let occupied_tiles = Enemies::get_occupied_tiles(&position, &(hitbox*0.5));
+            let occupied_tiles = Enemies::get_occupied_tiles(&position, &(hitbox * 0.5));
             println!("occupied {:?}", occupied_tiles);
             for tile in occupied_tiles {
                 self.world_layout[tile.x as usize][tile.y as usize][tile.z as usize].retain(
@@ -144,7 +147,9 @@ impl World {
                                 if *eh == h {
                                     println!(
                                         "Enemy found at position: x: {}, y: {}, z: {}",
-                                        x, y, z
+                                        x,
+                                        y,
+                                        z
                                     );
                                 }
                             }
@@ -152,7 +157,6 @@ impl World {
                     }
                 }
             }
-            
             self.enemies.remove_enemy(h);
         }
     }
@@ -162,7 +166,7 @@ impl World {
             println!("event {:?}", event);
             match event {
                 WorldEvent::KillEnemy(h) => {
-                    self.remove_regular_enemy(h);
+                    self.remove_enemy(h);
                 }
                 WorldEvent::HitEnemy(h) => {
                     let index = h.0 as usize;
@@ -186,11 +190,7 @@ impl World {
             &self.enemies,
             &mut self.world_layout
         );
-        MovementSystem::update_enemies(
-            &self.player.pos,
-            &mut self.enemies,
-            &mut self.world_layout
-        );
+        MovementSystem::update_enemies(&self.player.pos, &mut self.enemies, &mut self.world_layout);
         // update_spawning_system(self, spawner, Duration::from_secs_f32(PHYSICS_FRAME_TIME));
         debug_assert!(
             self.world_layout[player_chunk.x as usize][player_chunk.y as usize][
@@ -260,10 +260,17 @@ impl World {
             self.world_layout = World::default().world_layout;
             self.enemies = World::default().enemies;
         }
-        
+
         if is_key_down(KeyCode::F) {
-            println!("player pos as chunk {:?}, non chunk {:?}", self.player.pos.to_chunk(), self.player.pos);
-            println!("Enemies {:?}", self.enemies.positions.iter().map(|f| f.to_chunk()));
+            println!(
+                "player pos as chunk {:?}, non chunk {:?}",
+                self.player.pos.to_chunk(),
+                self.player.pos
+            );
+            println!(
+                "Enemies {:?}",
+                self.enemies.positions.iter().map(|f| f.to_chunk())
+            );
         }
     }
 
@@ -286,23 +293,10 @@ impl World {
         hot_r_renderer::render_solid_blocks(screen, &self.solid_blocks.positions);
         hot_r_renderer::render_regular_enemies(
             screen,
-            &self.enemies.positions,
-            &self.enemies.velocities,
-            &self.enemies.animation_state,
-            &self.enemies.size
-        );
-        // hot_r_renderer::render_flying_enemies(
-        //     screen,
-        //     &self.flying_enemies.positions,
-        //     &self.flying_enemies.velocities,
-        //     &self.flying_enemies.animation_state,
-        //     &self.flying_enemies.size
-        // );
-        hot_r_renderer::render_enemy_world_positions(
-            screen,
-            &self.world_layout,
             &self.enemies,
         );
+
+        hot_r_renderer::render_enemy_world_positions(screen, &self.world_layout, &self.enemies);
         set_default_camera();
         let weapon_mesh = TEXTURE_TO_VOXEL_MESH.get(&Textures::Pistol).expect(
             "Failed to load weapon"
@@ -349,27 +343,16 @@ impl Drawer for DrawerImpl {
     fn draw_circle_lines(&self, position: Vec2, radius: f32, color: Color) {
         macroquad::prelude::draw_circle_lines(position.x, position.y, radius, 1.0, color);
     }
-    // fn draw_texture_ex(
-    //     &self,
-    //     texture: &Textures,
-    //     x: f32,
-    //     y: f32,
-    //     color: Color,
-    //     params: DrawTextureParams
-    // ) {
-    //     match texture {
-    //         Textures::Weapon => {
-                
-    //         }
-    //     }
-    // }
+
     fn draw_voxel_mesh(&self, mesh: &VoxelMesh) {
-        set_camera(& Camera3D { // aligns the weapon to the bottom left of the screen
-            position: vec3(-3.35, 5.35, -12.5), 
-            target: vec3(7.0, 5.0, 0.0),     
-            up: vec3(0.0, 1.0, 0.0),
-            ..Default::default()
-        });
+        set_camera(
+            &(Camera3D { // aligns the weapon to the bottom left of the screen
+                position: vec3(-3.35, 5.35, -12.5),
+                target: vec3(7.0, 5.0, 0.0),
+                up: vec3(0.0, 1.0, 0.0),
+                ..Default::default()
+            })
+        );
         for voxel in &mesh.voxels {
             draw_cube(voxel.position, vec3(1.0, 1.0, 1.0) * 0.5, None, voxel.color);
         }
